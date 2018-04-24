@@ -90,16 +90,19 @@ namespace useful
     namespace meta
     {
         template<class Tp>
-        struct is_string_type : public std::false_type {};
+        struct is_string_type_helper : public std::false_type {};
 
         template<>
-        struct is_string_type<std::string> : public std::true_type {};
+        struct is_string_type_helper<std::string> : public std::true_type {};
 
         template<>
-        struct is_string_type<char const*> : public std::true_type {};
+        struct is_string_type_helper<char const*> : public std::true_type {};
 
         template<>
-        struct is_string_type<std::string_view> : public std::true_type {};
+        struct is_string_type_helper<std::string_view> : public std::true_type {};
+
+        template<class Tp>
+        struct is_string_type : public is_string_type_helper<std::remove_cv_t<Tp>> {};
 
         template <class Tp>
         inline constexpr bool is_string_type_v = is_string_type<Tp>::value;
