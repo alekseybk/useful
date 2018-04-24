@@ -7,6 +7,13 @@ using namespace useful;
 
 int main()
 {
-    cout << meta::is_string_type_v<const string_view> << endl;
+    try
+    {
+        fn::err("123");
+    }
+    catch (std::runtime_error& e)
+    {
+        cout << e.what() << endl;
+    }
     return 0;
 }
