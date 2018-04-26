@@ -36,6 +36,10 @@ namespace useful
         protected:
             bool m_isset;
         public:
+            AbstractValue(bool isset) noexcept : m_isset(isset)
+            {
+
+            }
             void set() noexcept
             {
                 m_isset = true;
@@ -47,10 +51,6 @@ namespace useful
             bool isset() const noexcept
             {
                 return m_isset;
-            }
-            AbstractValue(bool isset) noexcept : m_isset(isset)
-            {
-
             }
         };
 
@@ -67,6 +67,10 @@ namespace useful
             {
 
             }
+            Value(Tp&& value) : AbstractValue(true), m_value(std::move(value))
+            {
+
+            }
             template<class V>
             void set(V&& value) noexcept
             {
@@ -74,6 +78,10 @@ namespace useful
                 m_value = std::forward<V>(value);
             }
             const Tp& get() const noexcept
+            {
+                return m_value;
+            }
+            operator const Tp&() const noexcept
             {
                 return m_value;
             }
@@ -125,13 +133,13 @@ namespace useful
         }
 
         template<class Exception = std::runtime_error, class... Errors>
-        void err(const std::string& what, Errors... p)
+        void err(const std::string& what, Errors&&... p)
         {
             static_assert(sizeof...(Errors) % 2 == 0);
             if constexpr (sizeof...(Errors))
-                throw Exception(std::move(what) + "\n" + internal::tupleToMessage<0, Errors...>(std::tuple<Errors...>(p...)));
+                throw Exception(what + "\n" + internal::tupleToMessage<0, Errors...>(std::tuple<Errors...>(std::forward<Errors>(p)...)));
             else
-                throw Exception(std::move(what) + "\n");
+                throw Exception(what + "\n");
         }
     }
 }
