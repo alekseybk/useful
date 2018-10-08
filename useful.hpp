@@ -83,7 +83,7 @@ namespace uf
         };
 
         template<class Tp>
-        Nullable(Tp&&) -> Nullable<std::decay_t<Tp>>;
+        Nullable(Tp&&) -> Nullable<Tp>;
     }
 
     namespace fn

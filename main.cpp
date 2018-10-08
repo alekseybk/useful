@@ -15,13 +15,11 @@ public:
     NoDefCtr(int i_) : i(i_) {}
 };
 
-
-
 int main()
 {
-    Nullable nl = NoDefCtr(10);
-    cout << nl().get() << endl;
-    +nl;
-    cout << ~nl << endl;
+    const NoDefCtr a(10);
+    Nullable nl = a;
+    -nl;
+    nl();
     return 0;
 }
