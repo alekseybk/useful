@@ -2,28 +2,36 @@
 #include <future>
 #include <vector>
 #include <algorithm>
+#include <memory>
+#include <iostream>
 
 using namespace std;
 
+// https://github.com/elseecay/useful
 
-namespace useful
+#define UFER(name, ...) (uf::fn::err(name, __PRETTY_FUNCTION__, __VA_ARGS__));
+
+namespace uf
 {
     namespace meta
     {
-        template<class Tp>
+        template<class>
         struct is_string_type_helper : public std::false_type {};
 
         template<>
-        struct is_string_type_helper<std::string> : public std::true_type {};
+        struct is_string_type_helper<char*> : public std::true_type {};
 
         template<>
         struct is_string_type_helper<const char*> : public std::true_type {};
 
         template<>
+        struct is_string_type_helper<std::string> : public std::true_type {};
+
+        template<>
         struct is_string_type_helper<std::string_view> : public std::true_type {};
 
         template<class Tp>
-        struct is_string_type : public is_string_type_helper<std::remove_cv_t<Tp>> {};
+        struct is_string_type : public is_string_type_helper<std::decay_t<Tp>> {};
 
         template<class Tp>
         inline constexpr bool is_string_type_v = is_string_type<Tp>::value;
@@ -31,61 +39,59 @@ namespace useful
 
     namespace cls
     {
-        class AbstractValue
+        template<class Tp>
+        class StackMemory
         {
-        protected:
-            bool m_isset;
+            uint8_t m_memory[sizeof(Tp)];
         public:
-            AbstractValue(bool isset) noexcept : m_isset(isset)
-            {
+            Tp& ref = *static_cast<Tp*>(static_cast<void*>(m_memory));
+        };
 
+        template<class Tp>
+        class Nullable
+        {
+            using value_type = std::decay_t<Tp>;
+            bool m_isset{false};
+            uint8_t m_memory[sizeof(value_type)]{};
+            value_type& m_ref = *static_cast<value_type*>(static_cast<void*>(m_memory));
+        public:
+            Nullable() = default;
+            template<class Tp_>
+            Nullable(Tp_&& value) : m_isset(true)
+            {
+                m_ref = std::forward<Tp_>(value);
             }
-            void set() noexcept
+            template<class Tp_>
+            value_type& operator=(Tp_&& value)
             {
                 m_isset = true;
+                m_ref = std::forward<Tp_>(value);
+                return m_ref;
             }
-            void unset() noexcept
+            value_type& operator()() const noexcept
+            {
+                return m_ref;
+            }
+            void operator-() noexcept
             {
                 m_isset = false;
             }
-            bool isset() const noexcept
+            void operator+() noexcept
+            {
+                m_isset = true;
+            }
+            bool operator~() const noexcept
             {
                 return m_isset;
+            }
+            operator value_type&() const noexcept
+            {
+                return m_ref;
             }
         };
 
         template<class Tp>
-        class Value : public AbstractValue
-        {
-            Tp m_value;
-        public:
-            Value() : AbstractValue(false)
-            {
-
-            }
-            Value(const Tp& value) : AbstractValue(true), m_value(value)
-            {
-
-            }
-            Value(Tp&& value) : AbstractValue(true), m_value(std::move(value))
-            {
-
-            }
-            template<class V>
-            void set(V&& value) noexcept
-            {
-                m_isset = true;
-                m_value = std::forward<V>(value);
-            }
-            const Tp& get() const noexcept
-            {
-                return m_value;
-            }
-            operator const Tp&() const noexcept
-            {
-                return m_value;
-            }
-        };
+        Nullable(Tp&&) -> Nullable<std::decay_t<Tp>>;
     }
 
     namespace fn
@@ -120,26 +126,37 @@ namespace useful
             template<size_t Index = 0, class... Errors>
             std::string tupleToMessage(const std::tuple<Errors...>& t)
             {
-                std::string nameStr = std::get<Index>(t), valueStr;
+                std::string name_str = std::get<Index>(t), value_str;
                 if constexpr (meta::is_string_type_v<std::tuple_element_t<Index + 1, std::tuple<Errors...>>>)
-                    valueStr = std::get<Index + 1>(t);
+                    value_str = std::get<Index + 1>(t);
                 else
-                    valueStr = std::to_string(std::get<Index + 1>(t));
+                    value_str = std::to_string(std::get<Index + 1>(t));
                 if constexpr ((Index + 2) >= sizeof...(Errors))
-                    return nameStr + ": " + valueStr + "\n";
+                    return name_str + " = " + value_str + "\n";
                 else
-                    return nameStr + ": " + valueStr + "\n" + tupleToMessage<Index + 2, Errors...>(t);
+                    return name_str + " = " + value_str + "\n" + tupleToMessage<Index + 2, Errors...>(t);
             }
         }
 
         template<class Exception = std::runtime_error, class... Errors>
-        void err(const std::string& what, Errors&&... p)
+        void err(string_view what, Errors&&... p)
         {
-            static_assert(sizeof...(Errors) % 2 == 0);
-            if constexpr (sizeof...(Errors))
-                throw Exception(what + "\n" + internal::tupleToMessage<0, Errors...>(std::tuple<Errors...>(std::forward<Errors>(p)...)));
+            if constexpr (sizeof...(Errors) % 2)
+            {
+                static_assert(meta::is_string_type_v<decltype(std::get<0>(std::tuple<Errors...>(p...)))>, "Second parameter should be function name");
+                std::tuple<Errors...> t(std::forward<Errors>(p)...);
+                if constexpr (sizeof...(Errors) > 1)
+                    throw Exception(string(what) + string(" in function: ") + string(get<0>(t)) + "\n" + internal::tupleToMessage<1, Errors...>(t));
+                else
+                    throw Exception(string(what) + string(" in function: ") + string(get<0>(t)) + "\n");
+            }
             else
-                throw Exception(what + "\n");
+            {
+                if constexpr (sizeof...(Errors))
+                    throw Exception(string(what) + "\n" + internal::tupleToMessage<0, Errors...>(std::tuple<Errors...>(std::forward<Errors>(p)...)));
+                else
+                    throw Exception(string(what) + "\n");
+            }
         }
     }
 }
