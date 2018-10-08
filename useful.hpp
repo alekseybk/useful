@@ -40,14 +40,6 @@ namespace uf
     namespace cls
     {
         template<class Tp>
-        class StackMemory
-        {
-            uint8_t m_memory[sizeof(Tp)];
-        public:
-            Tp& ref = *static_cast<Tp*>(static_cast<void*>(m_memory));
-        };
-
-        template<class Tp>
         class Nullable
         {
             using value_type = std::decay_t<Tp>;
