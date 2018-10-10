@@ -136,7 +136,7 @@ namespace uf
         using base::unset;
 
         template<class Tp_>
-        checkable(Tp_&& value) : base(value) {}
+        checkable(Tp_&& value) : base(std::forward<Tp_>(value)) {}
     };
 
     template<class Tp>
