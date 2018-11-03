@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <memory>
 #include <iostream>
+#include <unordered_set>
 
 using namespace std;
 
@@ -38,6 +39,9 @@ namespace uf
 
     template<class Tp>
     inline constexpr bool is_string_type_v = is_string_type<Tp>::value;
+
+    template<typename CurTupleType, typename... Types>
+    using add_to_tuple_t = decltype(std::tuple_cat(std::declval<CurTupleType>(), std::declval<std::tuple<Types...>>()));
 
     namespace internal
     {
@@ -119,24 +123,12 @@ namespace uf
         void unset() noexcept { m_flag = false; }
     };
 
-    // partial specialization for false
     template<class Tp>
     class checkable<Tp, false> : public checkable<Tp, true>
     {
-        using base = checkable<Tp, true>;
-
     public:
-
-        using base::operator=;
-        using base::operator typename base::reference;
-        using base::operator typename base::const_reference;
-        using base::get;
-        using base::check;
-        using base::set;
-        using base::unset;
-
         template<class Tp_>
-        checkable(Tp_&& value) : base(std::forward<Tp_>(value)) {}
+        checkable(Tp_&& value) : checkable<Tp, true>(value) {}
     };
 
     template<class Tp>
@@ -164,5 +156,34 @@ namespace uf
         for_each<InputIterator, Function>(b, e, f);
         for (auto& h : handle)
             h.wait();
+    }
+
+    template<class StringType>
+    vector<StringType> split_string(const StringType& s, const unordered_set<typename StringType::value_type>& sep_seq)
+    {
+        vector<StringType> result;
+        StringType cur;
+        bool first = true;
+        for (const auto& c : s)
+        {
+            if (first)
+            {
+                if (sep_seq.find(c) != sep_seq.end())
+                    continue;
+                first = false;
+                cur.push_back(c);
+                continue;
+            }
+            if (sep_seq.find(c) != sep_seq.end())
+            {
+                result.push_back(std::move(cur));
+                first = true;
+            }
+            else
+                cur.push_back(c);
+        }
+        if (cur.size())
+            result.push_back(std::move(cur));
+        return result;
     }
 }
