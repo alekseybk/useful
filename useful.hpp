@@ -30,6 +30,24 @@ namespace uf
 
         template<>
         struct is_string_type_helper<std::string_view> : public std::true_type {};
+
+        template<typename Tuple, typename N, typename... Types>
+        struct remove_last_in_tuple_helper : public remove_last_in_tuple_helper<Tuple, integral_constant<size_t, N::value - 1u>, tuple_element_t<N::value - 1u, Tuple>, Types...> { };
+
+        template<typename Tuple, typename... Types>
+        struct remove_last_in_tuple_helper<Tuple, integral_constant<size_t, 0u>, Types...>
+        {
+            using type = std::tuple<Types...>;
+        };
+
+        template<typename Box, typename Tuple, size_t N, typename... Types>
+        struct tuple_types_on_target_helper : public tuple_types_on_target_helper<Box, Tuple, N - 1u, tuple_element_t<N - 1u, Tuple>, Types...> { };
+
+        template<typename Box, typename Tuple, typename... Types>
+        struct tuple_types_on_target_helper<Box, Tuple, 0u, Types...>
+        {
+            using type = typename Box::template type<Types...>;
+        };
     }
 
     using namespace internal;
@@ -40,8 +58,42 @@ namespace uf
     template<class Tp>
     inline constexpr bool is_string_type_v = is_string_type<Tp>::value;
 
+    template<typename Tuple, typename = enable_if_t<(tuple_size<Tuple>::value >= 1u)>>
+    struct remove_last_one_in_tuple
+    {
+        using type = typename remove_last_in_tuple_helper<Tuple, integral_constant<size_t, tuple_size<Tuple>::value - 1u>>::type;
+    };
+
+    template<typename Tuple>
+    using remove_last_one_in_tuple_t = typename remove_last_one_in_tuple<Tuple>::type;
+
+    template<typename Tuple, size_t N, typename = enable_if_t<(tuple_size<Tuple>::value >= N)>>
+    struct remove_last_n_in_tuple
+    {
+        using type = typename remove_last_in_tuple_helper<Tuple, integral_constant<size_t, tuple_size<Tuple>::value - N>>::type;
+    };
+
+    template<typename Tuple, size_t N>
+    using remove_last_n_in_tuple_t = typename remove_last_n_in_tuple<Tuple, N>::type;
+
     template<typename CurTupleType, typename... Types>
     using add_to_tuple_t = decltype(std::tuple_cat(std::declval<CurTupleType>(), std::declval<std::tuple<Types...>>()));
+
+    template<template<typename...> typename Target>
+    struct tmpl_tmpl_box
+    {
+        template<typename... Types>
+        using type = Target<Types...>;
+    };
+
+    template<template<typename...> typename Target, typename Tuple>
+    struct tuple_types_on_target
+    {
+        using type = typename tuple_types_on_target_helper<tmpl_tmpl_box<Target>, Tuple, tuple_size<Tuple>::value>::type;
+    };
+
+    template<template<typename...> typename Target, typename Tuple>
+    using tuple_types_on_target_t = typename tuple_types_on_target<Target, Tuple>::type;
 
     namespace internal
     {
