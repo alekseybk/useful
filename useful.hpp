@@ -95,6 +95,9 @@ namespace uf
     template<template<typename...> typename Target, typename Tuple>
     using tuple_types_on_target_t = typename tuple_types_on_target<Target, Tuple>::type;
 
+    template<template<typename...> typename Target, typename Tuple, size_t... Indexes>
+    using tuple_types_on_target_idx_t = Target<tuple_element_t<Indexes, Tuple>...>;
+
     namespace internal
     {
         template<size_t Index = 0, class... Errors>
