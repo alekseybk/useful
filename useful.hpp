@@ -132,6 +132,48 @@ namespace uf
     template<template<typename...> typename Target, typename Tuple, size_t... Indexes>
     using tuple_types_on_target_idx_t = Target<tuple_element_t<Indexes, Tuple>...>;
 
+    template<typename TupleA, typename IndexA, typename TupleB, typename IndexB, typename... Types>
+    struct concat_two_tuples_helper : public concat_two_tuples_helper<TupleA, integral_constant<size_t, IndexA::value + 1u>,
+                                                                      TupleB, integral_constant<size_t, IndexB::value>,
+                                                                      Types..., tuple_element_t<IndexA::value, TupleA>> { };
+
+
+    template<typename TupleA, typename TupleB, typename IndexB, typename... Types>
+    struct concat_two_tuples_helper<TupleA, integral_constant<size_t, tuple_size<TupleA>::value>, TupleB, IndexB, Types...> : public
+                          concat_two_tuples_helper<TupleA, integral_constant<size_t, tuple_size<TupleA>::value>,
+                          TupleB, integral_constant<size_t, IndexB::value + 1u>,
+                          Types..., tuple_element_t<IndexB::value, TupleB>> { };
+
+    template<typename TupleA, typename TupleB, typename... Types>
+    struct concat_two_tuples_helper<TupleA, integral_constant<size_t, tuple_size<TupleA>::value>, TupleB, integral_constant<size_t, tuple_size<TupleB>::value>, Types...>
+    {
+        using type = tuple<Types...>;
+    };
+
+    template<typename TupleA, typename TupleB>
+    struct concat_two_tuples
+    {
+        using type = typename concat_two_tuples_helper<TupleA, integral_constant<size_t, 0u>, TupleB, integral_constant<size_t, 0u>>::type;
+    };
+
+    template<typename Result, typename Tuple, typename... Tuples>
+    struct tuple_concat_helper : public tuple_concat_helper<typename concat_two_tuples<Result, Tuple>::type, Tuples...> { };
+
+    template<typename Result, typename Tuple>
+    struct tuple_concat_helper<Result, Tuple>
+    {
+        using type = typename concat_two_tuples<Result, Tuple>::type;
+    };
+
+    template<typename... Tuples>
+    struct tuple_concat
+    {
+        using type = typename tuple_concat_helper<tuple<>, Tuples...>::type;
+    };
+
+    template<typename... Tuples>
+    using tuple_concat_t = typename tuple_concat<Tuples...>::type;
+
     namespace internal
     {
         template<size_t Index = 0, class... Errors>
@@ -221,7 +263,7 @@ namespace uf
     };
 
     template<class Tp>
-    checkable(Tp&&) -> checkable<Tp>;
+    checkable(Tp&&) -> checkable<std::decay_t<Tp>>;
 
     template<class InputIterator, class Function>
     void for_each_fast(InputIterator b, InputIterator e, Function f)
