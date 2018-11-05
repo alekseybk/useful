@@ -76,8 +76,42 @@ namespace uf
     template<typename Tuple, size_t N>
     using remove_last_n_in_tuple_t = typename remove_last_n_in_tuple<Tuple, N>::type;
 
-    template<typename CurTupleType, typename... Types>
-    using add_to_tuple_t = decltype(std::tuple_cat(std::declval<CurTupleType>(), std::declval<std::tuple<Types...>>()));
+    template<typename Tuple, size_t N, typename... Types>
+    struct add_to_tuple_end_helper : public add_to_tuple_end_helper<Tuple, N - 1u, tuple_element_t<N - 1u, Tuple>, Types...> { };
+
+    template<typename Tuple, typename... Types>
+    struct add_to_tuple_end_helper<Tuple, 0u, Types...>
+    {
+        using type = tuple<Types...>;
+    };
+
+    template<typename Tuple, typename... Types>
+    struct add_to_tuple_end
+    {
+        using type = typename add_to_tuple_end_helper<Tuple, tuple_size<Tuple>::value, Types...>::type;
+    };
+
+    template<typename Tuple, typename... Types>
+    using add_to_tuple_end_t = typename add_to_tuple_end<Tuple, Types...>::type;
+
+    template<typename Tuple, typename N, typename... Types>
+    struct add_to_tuple_begin_helper : public add_to_tuple_begin_helper<Tuple, integral_constant<size_t, N::value + 1u>,
+    Types..., tuple_element_t<N::value, Tuple>> { };
+
+    template<typename Tuple, typename... Types>
+    struct add_to_tuple_begin_helper<Tuple, integral_constant<size_t, tuple_size<Tuple>::value>, Types...>
+    {
+        using type = tuple<Types...>;
+    };
+
+    template<typename Tuple, typename... Types>
+    struct add_to_tuple_begin
+    {
+        using type = typename add_to_tuple_begin_helper<Tuple, integral_constant<size_t, 0u>, Types...>::type;
+    };
+
+    template<typename Tuple, typename... Types>
+    using add_to_tuple_begin_t = typename add_to_tuple_begin<Tuple, Types...>::type;
 
     template<template<typename...> typename Target>
     struct tmpl_tmpl_box
