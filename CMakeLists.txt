@@ -8,4 +8,5 @@ file(GLOB headers "useful.hpp")
 file(GLOB sources "main.cpp")
 
 add_executable(${PROJECT_NAME} "main.cpp" ${sources} ${headers})
+target_link_libraries(${PROJECT_NAME} "pthread")
 

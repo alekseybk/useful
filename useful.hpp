@@ -1,5 +1,7 @@
 #include <vector>
 #include <functional>
+#include <atomic>
+#include <thread>
 
 namespace uf
 {
@@ -8,6 +10,7 @@ namespace uf
     using std::string_view;
     using std::pair;
     using std::function;
+    using std::atomic;
 
     using std::getline;
 
@@ -385,19 +388,6 @@ namespace uf
     }
     // end namesapce detail
 
-    template<class Tp, template<class> class Compare>
-    class dereference_compare
-    {
-        const Compare<Tp> comp_;
-
-    public:
-        template<class Pointer>
-        bool operator()(const Pointer& a, const Pointer& b) const
-        {
-            return comp_(*a, *b);
-        }
-    };
-
     template<class Container, class... Delimiters>
     auto split(Container&& container, Delimiters&&... delimiters)
     {
@@ -448,5 +438,42 @@ namespace uf
         auto temp = split(std::forward<Container>(container), std::forward<Delimiters>(delimiters)...);
         return detail::create_split_tuple(std::move(temp), make_index_sequence<N>());
     }
+
+    class spinlock
+    {
+        atomic<bool> flag_ = false;
+
+    public:
+        bool try_lock()
+        {
+            bool dummy = false;
+            return flag_.compare_exchange_strong(dummy, true, std::memory_order_acquire);
+        }
+
+        void lock()
+        {
+            bool dummy = false;
+            while (!flag_.compare_exchange_weak(dummy, true, std::memory_order_acquire))
+            {
+                dummy = false;
+                std::this_thread::yield();
+            }
+        }
+
+        void unlock() { flag_.exchange(false, std::memory_order_release); }
+    };
+
+    template<class Tp, template<class> class Compare>
+    class dereference_compare
+    {
+        const Compare<Tp> comp_;
+
+    public:
+        template<class Pointer>
+        bool operator()(const Pointer& a, const Pointer& b) const
+        {
+            return comp_(*a, *b);
+        }
+    };
 }
 // end namespace uf
