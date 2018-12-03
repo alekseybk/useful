@@ -11,6 +11,7 @@ namespace uf
     using std::pair;
     using std::function;
     using std::atomic;
+    using std::atomic_flag;
 
     using std::getline;
 
@@ -441,26 +442,14 @@ namespace uf
 
     class spinlock
     {
-        atomic<bool> flag_ = false;
+        atomic_flag flag_ = ATOMIC_FLAG_INIT;
 
     public:
-        bool try_lock()
-        {
-            bool dummy = false;
-            return flag_.compare_exchange_strong(dummy, true, std::memory_order_acquire);
-        }
+        bool try_lock() { return !flag_.test_and_set(std::memory_order_acquire); }
 
-        void lock()
-        {
-            bool dummy = false;
-            while (!flag_.compare_exchange_weak(dummy, true, std::memory_order_acquire))
-            {
-                dummy = false;
-                std::this_thread::yield();
-            }
-        }
+        void lock() { while (flag_.test_and_set(std::memory_order_acquire)) std::this_thread::yield(); }
 
-        void unlock() { flag_.exchange(false, std::memory_order_release); }
+        void unlock() { flag_.clear(std::memory_order_release); }
     };
 
     template<class Tp, template<class> class Compare>
