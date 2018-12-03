@@ -7,12 +7,22 @@ using namespace std;
 using namespace uf::basic_types;
 using namespace uf::basic_types::literals;
 
+void f(int)
+{
+
+}
 
 int main()
 {
-    cout << uf::meta::is_string_type_v<const char(&)[6]> << endl;
-    string s("111 222, 333");
-    for (const auto& ss : uf::split(s, ' ', ','))
-        cout << ss << endl;
+    ifstream stream("/home/dbs/Downloads/akks11.txt");
+    ofstream output_stream("/home/dbs/Downloads/akks11_output.txt");
+    string s;
+    while (((void)std::getline(stream, s), s.size()))
+    {
+        auto [l, p] = uf::split<2>(s, [](char c){return c == ':';});
+        if (p.size() >= 10 && p.size() <= 15)
+            output_stream << l << " : " << p << '\n';
+    }
+    output_stream << flush;
     return 0;
 }
