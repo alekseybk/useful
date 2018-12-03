@@ -1,320 +1,450 @@
-#include <thread>
-#include <future>
 #include <vector>
-#include <algorithm>
-#include <memory>
-#include <iostream>
-#include <unordered_set>
-
-using namespace std;
-
-// https://github.com/elseecay/useful
-
-#define UFER(what, ...) uf::err(what, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#include <functional>
 
 namespace uf
 {
-    namespace internal
+    namespace basic_types
     {
-        template<class>
-        struct is_string_type_helper : public std::false_type {};
+        using u8 = uint8_t;
+        using i8 = int8_t;
 
-        template<>
-        struct is_string_type_helper<char*> : public std::true_type {};
+        using u16 = uint16_t;
+        using i16 = int16_t;
 
-        template<>
-        struct is_string_type_helper<const char*> : public std::true_type {};
+        using u32 = uint32_t;
+        using i32 = int32_t;
 
-        template<>
-        struct is_string_type_helper<std::string> : public std::true_type {};
+        using u64 = uint64_t;
+        using i64 = int64_t;
 
-        template<>
-        struct is_string_type_helper<std::string_view> : public std::true_type {};
+        namespace literals
+        {
+            inline constexpr u8 operator"" _u8(unsigned long long int value) noexcept { return value; }
+            inline constexpr i8 operator"" _i8(unsigned long long int value) noexcept { return value; }
 
-        template<typename Tuple, typename N, typename... Types>
-        struct remove_last_in_tuple_helper : public remove_last_in_tuple_helper<Tuple, integral_constant<size_t, N::value - 1u>, tuple_element_t<N::value - 1u, Tuple>, Types...> { };
+            inline constexpr u16 operator"" _u16(unsigned long long int value) noexcept { return value; }
+            inline constexpr i16 operator"" _i16(unsigned long long int value) noexcept { return value; }
+
+            inline constexpr u32 operator"" _u32(unsigned long long int value) noexcept { return value; }
+            inline constexpr i32 operator"" _i32(unsigned long long int value) noexcept { return value; }
+
+            inline constexpr u64 operator"" _u64(unsigned long long int value) noexcept { return value; }
+            inline constexpr i64 operator"" _i64(unsigned long long int value) noexcept { return value; }
+        }
+        // end namespace literals
+    }
+    // end namespace basic_types
+
+    using namespace basic_types;
+    using namespace basic_types::literals;
+
+    using std::vector;
+    using std::string;
+    using std::string_view;
+    using std::pair;
+    using std::function;
+
+    using std::enable_if_t;
+    using std::true_type;
+    using std::false_type;
+    using std::remove_reference_t;
+    using std::remove_pointer_t;
+    using std::is_lvalue_reference_v;
+    using std::conditional_t;
+    using std::is_pointer_v;
+    using std::is_same_v;
+    using std::decay_t;
+    using std::integral_constant;
+    using std::tuple;
+    using std::tuple_element_t;
+    using std::tuple_size_v;
+
+    namespace meta
+    {
+        namespace detail
+        {
+            template<class Tp>
+            struct is_string_type_helper : public conditional_t<is_pointer_v<Tp>,
+                                                      conditional_t<is_same_v<decay_t<remove_pointer_t<Tp>>, char>,
+                                                          true_type,
+                                                          false_type>,
+                                                      false_type> { };
+
+            template<>
+            struct is_string_type_helper<string> : public true_type { };
+
+            template<>
+            struct is_string_type_helper<string_view> : public true_type { };
+
+            template<typename Tuple, typename N, typename... Types>
+            struct tuple_remove_last_helper
+            {
+                using type = typename tuple_remove_last_helper<Tuple, integral_constant<size_t, N::value - 1u>, tuple_element_t<N::value - 1u, Tuple>, Types...>::type;
+            };
+
+            template<typename Tuple, typename... Types>
+            struct tuple_remove_last_helper<Tuple, integral_constant<size_t, 0u>, Types...>
+            {
+                using type = tuple<Types...>;
+            };
+
+            template<typename Tuple, typename N, typename... Ts>
+            struct tuple_remove_first_helper
+            {
+                using type = typename tuple_remove_first_helper<Tuple, integral_constant<size_t, N::value + 1u>, Ts..., tuple_element_t<N::value, Tuple>>::type;
+            };
+
+            template<typename Tuple, typename... Ts>
+            struct tuple_remove_first_helper<Tuple, integral_constant<size_t, tuple_size_v<Tuple>>, Ts...>
+            {
+                using type = tuple<Ts...>;
+            };
+
+            template<typename TargetWrapper, typename Tuple, size_t N, typename... Types>
+            struct tuple_apply_to_target_helper
+            {
+                using type = typename tuple_apply_to_target_helper<TargetWrapper, Tuple, N - 1u, tuple_element_t<N - 1u, Tuple>, Types...>::type;
+            };
+
+            template<typename TargetWrapper, typename Tuple, typename... Types>
+            struct tuple_apply_to_target_helper<TargetWrapper, Tuple, 0u, Types...>
+            {
+                using type = typename TargetWrapper::template type<Types...>;
+            };
+
+            template<typename TupleA, typename IndexA, typename TupleB, typename IndexB, typename... Types>
+            struct tuple_concat_two_helper : public tuple_concat_two_helper<TupleA, integral_constant<size_t, IndexA::value + 1u>,
+                    TupleB, integral_constant<size_t, IndexB::value>,
+                    Types..., tuple_element_t<IndexA::value, TupleA>> { };
+
+
+            template<typename TupleA, typename TupleB, typename IndexB, typename... Types>
+            struct tuple_concat_two_helper<TupleA, integral_constant<size_t, tuple_size_v<TupleA>>, TupleB, IndexB, Types...> : public
+                    tuple_concat_two_helper<TupleA, integral_constant<size_t, tuple_size_v<TupleA>>,
+                    TupleB, integral_constant<size_t, IndexB::value + 1u>,
+                    Types..., tuple_element_t<IndexB::value, TupleB>> { };
+
+            template<typename TupleA, typename TupleB, typename... Types>
+            struct tuple_concat_two_helper<TupleA, integral_constant<size_t, tuple_size_v<TupleA>>, TupleB,
+                                           integral_constant<size_t, tuple_size_v<TupleB>>, Types...>
+            {
+                using type = tuple<Types...>;
+            };
+
+            template<typename TupleA, typename TupleB>
+            struct tuple_concat_two
+            {
+                using type = typename tuple_concat_two_helper<TupleA, integral_constant<size_t, 0u>, TupleB, integral_constant<size_t, 0u>>::type;
+            };
+
+            template<typename Result, typename Tuple, typename... Tuples>
+            struct tuple_concat_helper : public tuple_concat_helper<typename tuple_concat_two<Result, Tuple>::type, Tuples...> { };
+
+            template<typename Result, typename Tuple>
+            struct tuple_concat_helper<Result, Tuple>
+            {
+                using type = typename tuple_concat_two<Result, Tuple>::type;
+            };
+
+            template<typename Tuple, size_t N, typename... Types>
+            struct tuple_push_back_helper : public tuple_push_back_helper<Tuple, N - 1u, tuple_element_t<N - 1u, Tuple>, Types...> { };
+
+            template<typename Tuple, typename... Types>
+            struct tuple_push_back_helper<Tuple, 0u, Types...>
+            {
+                using type = tuple<Types...>;
+            };
+
+            template<typename Tuple, typename N, typename... Types>
+            struct tuple_push_front_helper : public tuple_push_front_helper<Tuple, integral_constant<size_t, N::value + 1u>,
+                    Types..., tuple_element_t<N::value, Tuple>> { };
+
+            template<typename Tuple, typename... Types>
+            struct tuple_push_front_helper<Tuple, integral_constant<size_t, tuple_size_v<Tuple>>, Types...>
+            {
+                using type = tuple<Types...>;
+            };
+
+            template<typename Tp, size_t N, typename... Types>
+            struct tuple_same_n_helper
+            {
+                using type = typename tuple_same_n_helper<Tp, N - 1u, Tp, Types...>::type;
+            };
+
+            template<typename Tp, typename... Types>
+            struct tuple_same_n_helper<Tp, 0u, Types...>
+            {
+                using type = tuple<Types...>;
+            };
+        }
+        // end namespace detail
+
+        template<class Tp>
+        struct is_string_type : public detail::is_string_type_helper<decay_t<Tp>> { };
+
+        template<class Tp>
+        inline constexpr bool is_string_type_v = is_string_type<Tp>::value;
+
+        template<template<typename...> typename Target>
+        struct tmpl_tmpl_wrapper
+        {
+            template<typename... Types>
+            using type = Target<Types...>;
+        };
+
+        template<template<typename...> typename Target, typename... Ts>
+        using tmpl_tmpl_wrapper_t = typename tmpl_tmpl_wrapper<Target>::template type<Ts...>;
+
+        template<typename Tuple, typename = enable_if_t<(tuple_size_v<Tuple> >= 1u)>>
+        struct tuple_remove_last
+        {
+            using type = typename detail::tuple_remove_last_helper<Tuple, integral_constant<size_t, tuple_size_v<Tuple> - 1u>>::type;
+        };
+
+        template<typename Tuple>
+        using tuple_remove_last_t = typename tuple_remove_last<Tuple>::type;
+
+        template<typename Tuple, size_t N, typename = enable_if_t<(tuple_size_v<Tuple> >= N)>>
+        struct tuple_remove_last_n
+        {
+            using type = typename detail::tuple_remove_last_helper<Tuple, integral_constant<size_t, tuple_size_v<Tuple> - N>>::type;
+        };
+
+        template<typename Tuple, size_t N>
+        using tuple_remove_last_n_t = typename tuple_remove_last_n<Tuple, N>::type;
+
+        template<typename Tuple, typename = enable_if_t<(tuple_size_v<Tuple> >= 1)>>
+        struct tuple_remove_first
+        {
+            using type = typename detail::tuple_remove_first_helper<Tuple, integral_constant<size_t, 1u>>::type;
+        };
+
+        template<typename Tuple>
+        using tuple_remove_first_t = typename tuple_remove_first<Tuple>::type;
+
+        template<typename Tuple, size_t N, typename = enable_if_t<(tuple_size_v<Tuple> >= N)>>
+        struct tuple_remove_first_n
+        {
+            using type = typename detail::tuple_remove_first_helper<Tuple, integral_constant<size_t, N>>::type;
+        };
+
+        template<typename Tuple, size_t N>
+        using tuple_remove_first_n_t = typename tuple_remove_first_n<Tuple, N>::type;
 
         template<typename Tuple, typename... Types>
-        struct remove_last_in_tuple_helper<Tuple, integral_constant<size_t, 0u>, Types...>
+        struct tuple_push_back
         {
-            using type = std::tuple<Types...>;
+            using type = typename detail::tuple_push_back_helper<Tuple, tuple_size_v<Tuple>, Types...>::type;
         };
 
-        template<typename Box, typename Tuple, size_t N, typename... Types>
-        struct tuple_types_on_target_helper : public tuple_types_on_target_helper<Box, Tuple, N - 1u, tuple_element_t<N - 1u, Tuple>, Types...> { };
+        template<typename Tuple, typename... Types>
+        using tuple_push_back_t = typename tuple_push_back<Tuple, Types...>::type;
 
-        template<typename Box, typename Tuple, typename... Types>
-        struct tuple_types_on_target_helper<Box, Tuple, 0u, Types...>
+        template<typename Tuple, typename... Types>
+        struct tuple_push_front
         {
-            using type = typename Box::template type<Types...>;
+            using type = typename detail::tuple_push_front_helper<Tuple, integral_constant<size_t, 0u>, Types...>::type;
+        };
+
+        template<typename Tuple, typename... Types>
+        using tuple_push_front_t = typename tuple_push_front<Tuple, Types...>::type;
+
+        template<template<typename...> typename Target, typename Tuple>
+        struct tuple_apply_to_target
+        {
+            using type = typename detail::tuple_apply_to_target_helper<tmpl_tmpl_wrapper<Target>, Tuple, tuple_size_v<Tuple>>::type;
+        };
+
+        template<template<typename...> typename Target, typename Tuple>
+        using tuple_apply_to_target_t = typename tuple_apply_to_target<Target, Tuple>::type;
+
+        template<template<typename...> typename Target, typename Tuple, size_t... Indexes>
+        using tuple_apply_to_target_index_t = Target<tuple_element_t<Indexes, Tuple>...>;
+
+        template<typename... Tuples>
+        struct tuple_concat
+        {
+            using type = typename detail::tuple_concat_helper<tuple<>, Tuples...>::type;
+        };
+
+        template<typename... Tuples>
+        using tuple_concat_t = typename tuple_concat<Tuples...>::type;
+
+        template<typename Tp, size_t N>
+        struct tuple_same_n
+        {
+            using type = typename detail::tuple_same_n_helper<Tp, N>::type;
+        };
+
+        template<typename Tp, size_t N>
+        using tuple_same_n_t = typename tuple_same_n<Tp, N>::type;
+
+        template<class Function>
+        struct function_assistant;
+
+        template<class R, class... Args>
+        struct function_assistant<function<R(Args...)>>
+        {
+            static constexpr size_t arg_n = sizeof...(Args);
+
+            using res_t = R;
+
+            template<size_t N>
+            using arg_t = tuple_element_t<N, tuple<Args...>>;
         };
     }
+    // end namespace meta
 
-    using namespace internal;
-
-    template<class Tp>
-    struct is_string_type : public is_string_type_helper<std::decay_t<Tp>> {};
-
-    template<class Tp>
-    inline constexpr bool is_string_type_v = is_string_type<Tp>::value;
-
-    template<typename Tuple, typename = enable_if_t<(tuple_size<Tuple>::value >= 1u)>>
-    struct remove_last_one_in_tuple
+    namespace detail
     {
-        using type = typename remove_last_in_tuple_helper<Tuple, integral_constant<size_t, tuple_size<Tuple>::value - 1u>>::type;
-    };
-
-    template<typename Tuple>
-    using remove_last_one_in_tuple_t = typename remove_last_one_in_tuple<Tuple>::type;
-
-    template<typename Tuple, size_t N, typename = enable_if_t<(tuple_size<Tuple>::value >= N)>>
-    struct remove_last_n_in_tuple
-    {
-        using type = typename remove_last_in_tuple_helper<Tuple, integral_constant<size_t, tuple_size<Tuple>::value - N>>::type;
-    };
-
-    template<typename Tuple, size_t N>
-    using remove_last_n_in_tuple_t = typename remove_last_n_in_tuple<Tuple, N>::type;
-
-    template<typename Tuple, size_t N, typename... Types>
-    struct add_to_tuple_end_helper : public add_to_tuple_end_helper<Tuple, N - 1u, tuple_element_t<N - 1u, Tuple>, Types...> { };
-
-    template<typename Tuple, typename... Types>
-    struct add_to_tuple_end_helper<Tuple, 0u, Types...>
-    {
-        using type = tuple<Types...>;
-    };
-
-    template<typename Tuple, typename... Types>
-    struct add_to_tuple_end
-    {
-        using type = typename add_to_tuple_end_helper<Tuple, tuple_size<Tuple>::value, Types...>::type;
-    };
-
-    template<typename Tuple, typename... Types>
-    using add_to_tuple_end_t = typename add_to_tuple_end<Tuple, Types...>::type;
-
-    template<typename Tuple, typename N, typename... Types>
-    struct add_to_tuple_begin_helper : public add_to_tuple_begin_helper<Tuple, integral_constant<size_t, N::value + 1u>,
-    Types..., tuple_element_t<N::value, Tuple>> { };
-
-    template<typename Tuple, typename... Types>
-    struct add_to_tuple_begin_helper<Tuple, integral_constant<size_t, tuple_size<Tuple>::value>, Types...>
-    {
-        using type = tuple<Types...>;
-    };
-
-    template<typename Tuple, typename... Types>
-    struct add_to_tuple_begin
-    {
-        using type = typename add_to_tuple_begin_helper<Tuple, integral_constant<size_t, 0u>, Types...>::type;
-    };
-
-    template<typename Tuple, typename... Types>
-    using add_to_tuple_begin_t = typename add_to_tuple_begin<Tuple, Types...>::type;
-
-    template<template<typename...> typename Target>
-    struct tmpl_tmpl_box
-    {
-        template<typename... Types>
-        using type = Target<Types...>;
-    };
-
-    template<template<typename...> typename Target, typename Tuple>
-    struct tuple_types_on_target
-    {
-        using type = typename tuple_types_on_target_helper<tmpl_tmpl_box<Target>, Tuple, tuple_size<Tuple>::value>::type;
-    };
-
-    template<template<typename...> typename Target, typename Tuple>
-    using tuple_types_on_target_t = typename tuple_types_on_target<Target, Tuple>::type;
-
-    template<template<typename...> typename Target, typename Tuple, size_t... Indexes>
-    using tuple_types_on_target_idx_t = Target<tuple_element_t<Indexes, Tuple>...>;
-
-    template<typename TupleA, typename IndexA, typename TupleB, typename IndexB, typename... Types>
-    struct concat_two_tuples_helper : public concat_two_tuples_helper<TupleA, integral_constant<size_t, IndexA::value + 1u>,
-                                                                      TupleB, integral_constant<size_t, IndexB::value>,
-                                                                      Types..., tuple_element_t<IndexA::value, TupleA>> { };
-
-
-    template<typename TupleA, typename TupleB, typename IndexB, typename... Types>
-    struct concat_two_tuples_helper<TupleA, integral_constant<size_t, tuple_size<TupleA>::value>, TupleB, IndexB, Types...> : public
-                          concat_two_tuples_helper<TupleA, integral_constant<size_t, tuple_size<TupleA>::value>,
-                          TupleB, integral_constant<size_t, IndexB::value + 1u>,
-                          Types..., tuple_element_t<IndexB::value, TupleB>> { };
-
-    template<typename TupleA, typename TupleB, typename... Types>
-    struct concat_two_tuples_helper<TupleA, integral_constant<size_t, tuple_size<TupleA>::value>, TupleB, integral_constant<size_t, tuple_size<TupleB>::value>, Types...>
-    {
-        using type = tuple<Types...>;
-    };
-
-    template<typename TupleA, typename TupleB>
-    struct concat_two_tuples
-    {
-        using type = typename concat_two_tuples_helper<TupleA, integral_constant<size_t, 0u>, TupleB, integral_constant<size_t, 0u>>::type;
-    };
-
-    template<typename Result, typename Tuple, typename... Tuples>
-    struct tuple_concat_helper : public tuple_concat_helper<typename concat_two_tuples<Result, Tuple>::type, Tuples...> { };
-
-    template<typename Result, typename Tuple>
-    struct tuple_concat_helper<Result, Tuple>
-    {
-        using type = typename concat_two_tuples<Result, Tuple>::type;
-    };
-
-    template<typename... Tuples>
-    struct tuple_concat
-    {
-        using type = typename tuple_concat_helper<tuple<>, Tuples...>::type;
-    };
-
-    template<typename... Tuples>
-    using tuple_concat_t = typename tuple_concat<Tuples...>::type;
-
-    namespace internal
-    {
-        template<size_t Index = 0, class... Errors>
-        std::string tupleToMessage(const std::tuple<Errors...>& t)
+        template<class Container, class Bounds>
+        auto create_split_vector(Bounds&& bounds)
         {
-            std::string name_str = std::get<Index>(t), value_str;
-            if constexpr (is_string_type_v<std::tuple_element_t<Index + 1, std::tuple<Errors...>>>)
-                value_str = std::get<Index + 1>(t);
-            else
-                value_str = std::to_string(std::get<Index + 1>(t));
-            if constexpr ((Index + 2) >= sizeof...(Errors))
-                return name_str + " = " + value_str + "\n";
-            else
-                return name_str + " = " + value_str + "\n" + tupleToMessage<Index + 2, Errors...>(t);
+            vector<Container> result;
+            result.reserve(bounds.size());
+            for (const auto& [b, e] : bounds)
+                result.emplace_back(b, e);
+            return result;
         }
     }
+    // end namesapce detail
 
-    template<class Exception = std::runtime_error, class... Errors>
-    void err(string_view what, Errors&&... p)
+    template<typename UContainer, typename E>
+    constexpr auto&& fwd_elem(E&& e)
     {
-        if constexpr (sizeof...(Errors) % 2)
-        {
-            static_assert(is_string_type_v<decltype(std::get<0>(std::tuple<Errors...>(p...)))>, "Second parameter should be function name");
-            std::tuple<Errors...> t(std::forward<Errors>(p)...);
-            if constexpr (sizeof...(Errors) > 1)
-                throw Exception(string(what) + "\n" + string("in function: ") + string(get<0>(t)) + "\n" + internal::tupleToMessage<1, Errors...>(t));
-            else
-                throw Exception(string(what) + "\n" + string(" in function: ") + string(get<0>(t)) + "\n");
-        }
+        if constexpr (!is_lvalue_reference_v<E>)
+            return static_cast<remove_reference_t<E>&&>(e);
+        else if constexpr (is_lvalue_reference_v<UContainer>)
+            return static_cast<remove_reference_t<E>&>(e);
         else
-        {
-            if constexpr (sizeof...(Errors))
-                throw Exception(string(what) + "\n" + internal::tupleToMessage<0, Errors...>(std::tuple<Errors...>(std::forward<Errors>(p)...)));
-            else
-                throw Exception(string(what) + "\n");
-        }
+            return static_cast<remove_reference_t<E>&&>(e);
     }
 
-    template<class Tp, bool = std::is_default_constructible_v<std::decay_t<Tp>>>
-    class checkable
+    template<class Tp, template<class> class Compare>
+    class dereference_compare
     {
-    protected:
-
-        using value_type = std::decay_t<Tp>;
-        using reference = value_type&;
-        using const_reference = const value_type&;
-        using rvalue_reference = value_type&&;
-
-        value_type m_val;
-        bool m_flag = false;
+        const Compare<Tp> comp_;
 
     public:
-
-        checkable() = default;
-
-        template<class Tp_>
-        checkable(Tp_&& value) : m_val(std::forward<Tp_>(value)), m_flag(true) {}
-
-        template<class Tp_>
-        const_reference operator=(Tp_&& value)
+        template<class Pointer>
+        bool operator()(const Pointer& a, const Pointer& b) const
         {
-            m_val = std::forward<Tp_>(value);
-            m_flag = true;
+            return comp_(*a, *b);
         }
-
-        operator reference() noexcept { return m_val; }
-
-        operator const_reference() const noexcept { return m_val; }
-
-        reference get() noexcept { return m_val; }
-
-        const_reference get() const noexcept { return m_val; }
-
-        bool check() const noexcept { return m_flag; }
-
-        void set() noexcept { m_flag = true; }
-
-        void unset() noexcept { m_flag = false; }
     };
 
-    template<class Tp>
-    class checkable<Tp, false> : public checkable<Tp, true>
+    template<class Container, class... Delimiters>
+    auto split(Container&& container, Delimiters&&... delimiters)
     {
-    public:
-        template<class Tp_>
-        checkable(Tp_&& value) : checkable<Tp, true>(value) {}
-    };
+        using container_t = remove_reference_t<Container>;
+        using iterator_t = typename container_t::const_iterator;
 
-    template<class Tp>
-    checkable(Tp&&) -> checkable<std::decay_t<Tp>>;
-
-    template<class InputIterator, class Function>
-    void for_each_fast(InputIterator b, InputIterator e, Function f)
-    {
-        typedef decltype(std::async(std::launch::async, std::for_each<InputIterator, Function>,
-        std::declval<InputIterator>(), std::declval<InputIterator>(),std::declval<Function>())) future_type;
-
-        const auto hc = thread::hardware_concurrency();
-        const auto dst = distance(b, e);
-        const auto per_thr = dst / hc;
-        const auto mod = dst % hc;
-
-        auto last = b;
-        vector<future_type> handle;
-        for (unsigned i = 0; i < hc - 1; ++i)
-        {
-            advance(last, per_thr + ((mod > i) ? 1 : 0));
-            handle.push_back(async(std::launch::async, for_each<InputIterator, Function>, b, last, f));
-            b = last;
-        }
-        for_each<InputIterator, Function>(b, e, f);
-        for (auto& h : handle)
-            h.wait();
-    }
-
-    template<class StringType>
-    vector<StringType> split_string(const StringType& s, const unordered_set<typename StringType::value_type>& sep_seq)
-    {
-        vector<StringType> result;
-        StringType cur;
         bool first = true;
-        for (const auto& c : s)
+        vector<pair<iterator_t, iterator_t>> bounds;
+        for (auto i = container.cbegin(); i != container.cend(); ++i)
         {
             if (first)
             {
-                if (sep_seq.find(c) != sep_seq.end())
+                if (((*i == delimiters) || ...))
                     continue;
                 first = false;
-                cur.push_back(c);
+                bounds.push_back({i, container.cend()});
                 continue;
             }
-            if (sep_seq.find(c) != sep_seq.end())
+            if (((*i == delimiters) || ...))
             {
-                result.push_back(std::move(cur));
+                bounds.back().second = i;
                 first = true;
             }
-            else
-                cur.push_back(c);
         }
-        if (cur.size())
-            result.push_back(std::move(cur));
-        return result;
+
+        return detail::create_split_vector<container_t>(bounds);
     }
+
+        /*
+        template<class Container, class DelimContainer>
+        auto split_with_container(Container&& container, DelimContainer&& delimiters)
+        {
+            bool first = true;
+            split_result<Container> result;
+            for (auto i = container.cbegin(); i < container.cend(); ++i)
+            {
+                if (first)
+                {
+                    for (const auto& d : delimiters)
+                        if (d == *i)
+                            goto NEXT;
+                    first = false;
+                    result.bounds.push_back({i, container.end()});
+                    continue;
+                }
+                for (const auto& d : delimiters)
+                {
+                    if (d == *i)
+                    {
+                        result.bounds.back().second = i;
+                        first = true;
+                        goto NEXT;
+                    }
+                }
+            NEXT: ;
+            }
+            return result;
+        }
+
+        template<class Container, class DelimSetContainer>
+        auto split_with_set(Container&& container, DelimSetContainer&& delimiters)
+        {
+            bool first = true;
+            split_result<Container> result;
+            for (auto i = container.cbegin(); i < container.cend(); ++i)
+            {
+                if (first)
+                {
+                    if (delimiters.count(*i))
+                        continue;
+                    first = false;
+                    result.bounds.push_back({i, container.end()});
+                    continue;
+                }
+                if (delimiters.count(*i))
+                {
+                    result.bounds.back().second = i;
+                    first = true;
+                }
+            }
+            return result;
+        }
+
+        template<class Container, class Function>
+        auto split_with_function(Container&& container, Function&& delim_func)
+        {
+            size_t index = 0;
+            bool first = true;
+            split_result<Container> result;
+            for (auto i = container.begin(); i < container.end(); ++i, ++index)
+            {
+                if (first)
+                {
+                    bool fres;
+                    if constexpr (function_assistant<std::remove_reference_t<Function>>::arg_n == 1)
+                        fres = delim_func(*i);
+                    else
+                        fres = delim_func(*i, index);
+                    if (fres)
+                        continue;
+                    first = false;
+                    result.bounds.push_back({i, container.end()});
+                    continue;
+                }
+                if (delim_func(*i, index))
+                {
+                    result.bounds.back().second = i;
+                    first = true;
+                }
+            }
+            return result;
+        }
+        */
 }
+// end namespace uf
