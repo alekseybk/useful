@@ -227,6 +227,12 @@ namespace uf
             {
                 using type = tuple<Types...>;
             };
+
+            template<template<typename...> typename Expected, typename Tested>
+            struct is_same_tmpl_helper : public false_type { };
+
+            template<template<typename...> typename Expected, typename... Ts>
+            struct is_same_tmpl_helper<Expected, Expected<Ts...>> : public true_type { };
         }
         // end namespace detail
 
@@ -336,13 +342,7 @@ namespace uf
         template<template<typename...> typename Expected, typename Tested>
         struct is_same_tmpl // for templates with type parameters only
         {
-            template<typename Tp>
-            struct helper : public false_type { };
-
-            template<typename... Ts>
-            struct helper<Expected<Ts...>> : public true_type { };
-
-            static constexpr bool value = helper<Tested>::value;
+            static constexpr bool value = detail::is_same_tmpl_helper<Expected, Tested>::value;
         };
 
         template<template<typename...> typename Expected, typename Tested>
