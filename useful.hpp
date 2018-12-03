@@ -250,14 +250,29 @@ namespace uf
         inline constexpr bool is_string_type_v = is_string_type<Tp>::value;
 
         template<template<typename...> typename Target>
-        struct tmpl_tmpl_wrapper
+        struct tmpl_add_args
         {
             template<typename... Types>
             using type = Target<Types...>;
         };
 
         template<template<typename...> typename Target, typename... Ts>
-        using tmpl_tmpl_wrapper_t = typename tmpl_tmpl_wrapper<Target>::template type<Ts...>;
+        using tmpl_add_args_t = typename tmpl_add_args<Target>::template type<Ts...>;
+
+        template<typename Tp>
+        struct tmpl_remove_args;
+
+        template<template<typename...> typename Tp, typename... Ts>
+        struct tmpl_remove_args<Tp<Ts...>>
+        {
+            template<typename... Args>
+            using type = Tp<Args...>;
+
+            using args = tuple<Ts...>;
+        };
+
+        template<typename Tp>
+        using tmpl_remove_args_t = typename tmpl_remove_args<Tp>::type;
 
         template<typename Tuple, typename = enable_if_t<(tuple_size_v<Tuple> >= 1u)>>
         struct tuple_remove_last
@@ -316,7 +331,7 @@ namespace uf
         template<template<typename...> typename Target, typename Tuple>
         struct tuple_apply_to_target
         {
-            using type = typename detail::tuple_apply_to_target_helper<tmpl_tmpl_wrapper<Target>, Tuple, tuple_size_v<Tuple>>::type;
+            using type = typename detail::tuple_apply_to_target_helper<tmpl_add_args<Target>, Tuple, tuple_size_v<Tuple>>::type;
         };
 
         template<template<typename...> typename Target, typename Tuple>
@@ -343,8 +358,36 @@ namespace uf
         template<typename Tp, size_t N>
         using tuple_same_n_t = typename tuple_same_n<Tp, N>::type;
 
+        template<typename Tp, size_t Index, typename Tuple, typename CurIndex, typename... Ts>
+        struct tuple_replace_index_helper
+        {
+            using type = typename tuple_replace_index_helper<Tp, Index, Tuple,
+                         integral_constant<size_t, CurIndex::value + 1>, Ts..., tuple_element_t<CurIndex::value, Tuple>>::type;
+        };
+
+        template<typename Tp, size_t Index, typename Tuple, typename... Ts>
+        struct tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, Index>, Ts...>
+        {
+            using type = typename tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, Index + 1>, Ts..., Tp>::type;
+        };
+
+        template<typename Tp, size_t Index, typename Tuple, typename... Ts>
+        struct tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, tuple_size_v<Tuple>>, Ts...>
+        {
+            using type = tuple<Ts...>;
+        };
+
+        template<typename Tp, size_t Index, typename Tuple>
+        struct tuple_replace_index
+        {
+            using type = typename tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, 0u>>::type;
+        };
+
+        template<typename Tp, size_t Index, typename Tuple>
+        using tuple_replace_index_t = typename tuple_replace_index<Tp, Index, Tuple>::type;
+
         template<template<typename...> typename Expected, typename Tested>
-        struct is_same_tmpl // for templates with type parameters only
+        struct is_same_tmpl
         {
             static constexpr bool value = detail::is_same_tmpl_helper<Expected, Tested>::value;
         };
@@ -438,6 +481,53 @@ namespace uf
     {
         auto temp = split(std::forward<Container>(container), std::forward<Delimiters>(delimiters)...);
         return detail::create_split_tuple(std::move(temp), make_index_sequence<N>());
+    }
+
+    template<class Container>
+    auto position_pairs(Container&& container)
+    {
+        using value_t = typename remove_reference_t<Container>::value_type;
+        using meta_t = meta::tmpl_remove_args<remove_reference_t<Container>>;
+        using result_t = typename meta_t::template type<pair<u64, value_t>>;
+
+        u64 j = 0;
+        result_t result;
+        for (auto i = container.begin(); i != container.end(); ++i, ++j)
+            result.push_back({j, fwd_elem<Container>(*i)});
+        return result;
+    }
+
+    template<class Container, class Compare>
+    auto sort_save_position(Container&& container, const Compare& comp)
+    {
+        auto transformed = position_pairs(std::forward<Container>(container));
+        sort(transformed.begin(), transformed.end(), [&comp](const auto& a, const auto& b)
+        {
+            return comp(a.second, b.second);
+        });
+        return transformed;
+    }
+
+    template<class AssociativeContainer>
+    void remove_associative(AssociativeContainer& container, const typename AssociativeContainer::mapped_type& value)
+    {
+        for (auto i = begin(container); i != end(container);)
+        {
+            if (value == i->second)
+                i = container.erase(i);
+            else
+                ++i;
+        }
+    }
+
+    template<class AssociativeContainer, class Predicate>
+    void remove_if_associative(AssociativeContainer& container, Predicate&& p)
+    {
+        for (auto i = begin(container); i != end(container);)
+            if (p(*i))
+                i = container.erase(i);
+            else
+                ++i;
     }
 
     class spinlock
