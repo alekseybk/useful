@@ -14,6 +14,8 @@ namespace uf
     using std::atomic_flag;
 
     using std::getline;
+    using std::forward;
+    using std::forward_as_tuple;
 
     using std::enable_if_t;
     using std::true_type;
@@ -429,6 +431,27 @@ namespace uf
             using elem_t = typename remove_reference_t<SplitVector>::value_type;
             return meta::tuple_same_n_t<elem_t, sizeof...(Indexes)>{fwd_elem<SplitVector>(vec[Indexes])...};
         }
+
+        template<size_t N, class Tuple, class ValueType>
+        bool split_check_helper(Tuple&& t, const ValueType& v)
+        {
+            using tpl_t = remove_reference_t<Tuple>;
+
+            if constexpr (N == tuple_size_v<tpl_t>)
+                return false;
+            else
+            {
+                bool result;
+                if constexpr (is_invocable_r_v<bool, remove_reference_t<tuple_element_t<N, tpl_t>>, const ValueType&> &&
+                              !is_same_v<decay_t<tuple_element_t<N, tpl_t>>, decay_t<ValueType>>)
+                    result = std::get<N>(t)(v);
+                else
+                    result = (v == std::get<N>(t));
+                if (result)
+                    return true;
+                return split_check_helper<N + 1>(t, v);
+            }
+        }
     }
     // end namesapce detail
 
@@ -441,17 +464,7 @@ namespace uf
 
         auto check = [&delimiters...](const value_t& value) -> bool
         {
-             if constexpr ((is_invocable_r_v<bool, remove_reference_t<Delimiters>, value_t> && ...))
-             {
-                 if ((delimiters(value) || ...))
-                     return true;
-             }
-             else
-             {
-                 if (((delimiters == value) || ...))
-                     return true;
-             }
-             return false;
+            return detail::split_check_helper<0>(tuple{delimiters...}, value);
         };
 
         bool empty_seq = true;
@@ -515,7 +528,7 @@ namespace uf
 
         auto check = [&rm](const mapped_t& value)
         {
-            if constexpr (is_invocable_r_v<bool, remove_reference_t<Remover>, mapped_t>)
+            if constexpr (is_invocable_r_v<bool, remove_reference_t<Remover>, const mapped_t&> && !is_same_v<decay_t<Remover>, decay_t<mapped_t>>)
                 return rm(value);
             else
                 return value == rm;

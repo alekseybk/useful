@@ -9,10 +9,9 @@ using namespace uf::basic_types::literals;
 
 int main()
 {
-
-    std::map<int, int> a{{1, 2}, {4, 3}, {7, 2}};
-    uf::remove_associative(a, [](int x){return x == 2;});
-    for (auto [k, v] : a)
-        cout << k << ' ' << v << endl;
+    string s = "14.123, 124; 125. 11.12.13";
+    auto sv = uf::split(s, [](char c){return c == ' ';}, ',', ';', [](char c){return c == '.';});
+    for (auto ss : sv)
+        cout << ss << endl;
     return 0;
 }
