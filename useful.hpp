@@ -220,6 +220,25 @@ namespace uf
                 using type = tuple<Types...>;
             };
 
+            template<typename Tp, size_t Index, typename Tuple, typename CurIndex, typename... Ts>
+            struct tuple_replace_index_helper
+            {
+                using type = typename tuple_replace_index_helper<Tp, Index, Tuple,
+                             integral_constant<size_t, CurIndex::value + 1>, Ts..., tuple_element_t<CurIndex::value, Tuple>>::type;
+            };
+
+            template<typename Tp, size_t Index, typename Tuple, typename... Ts>
+            struct tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, Index>, Ts...>
+            {
+                using type = typename tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, Index + 1>, Ts..., Tp>::type;
+            };
+
+            template<typename Tp, size_t Index, typename Tuple, typename... Ts>
+            struct tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, tuple_size_v<Tuple>>, Ts...>
+            {
+                using type = tuple<Ts...>;
+            };
+
             template<typename Tp, size_t N, typename... Types>
             struct tuple_same_n_helper
             {
@@ -358,29 +377,10 @@ namespace uf
         template<typename Tp, size_t N>
         using tuple_same_n_t = typename tuple_same_n<Tp, N>::type;
 
-        template<typename Tp, size_t Index, typename Tuple, typename CurIndex, typename... Ts>
-        struct tuple_replace_index_helper
-        {
-            using type = typename tuple_replace_index_helper<Tp, Index, Tuple,
-                         integral_constant<size_t, CurIndex::value + 1>, Ts..., tuple_element_t<CurIndex::value, Tuple>>::type;
-        };
-
-        template<typename Tp, size_t Index, typename Tuple, typename... Ts>
-        struct tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, Index>, Ts...>
-        {
-            using type = typename tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, Index + 1>, Ts..., Tp>::type;
-        };
-
-        template<typename Tp, size_t Index, typename Tuple, typename... Ts>
-        struct tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, tuple_size_v<Tuple>>, Ts...>
-        {
-            using type = tuple<Ts...>;
-        };
-
         template<typename Tp, size_t Index, typename Tuple>
         struct tuple_replace_index
         {
-            using type = typename tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, 0u>>::type;
+            using type = typename detail::tuple_replace_index_helper<Tp, Index, Tuple, integral_constant<size_t, 0u>>::type;
         };
 
         template<typename Tp, size_t Index, typename Tuple>
@@ -454,22 +454,22 @@ namespace uf
              return false;
         };
 
-        bool first = true;
+        bool empty_seq = true;
         vector<pair<iterator_t, iterator_t>> bounds;
         for (auto i = container.cbegin(); i != container.cend(); ++i)
         {
-            if (first)
+            if (empty_seq)
             {
                 if (check(*i))
                     continue;
-                first = false;
+                empty_seq = false;
                 bounds.push_back({i, container.cend()});
                 continue;
             }
             if (check(*i))
             {
                 bounds.back().second = i;
-                first = true;
+                empty_seq = true;
             }
         }
 
@@ -508,26 +508,26 @@ namespace uf
         return transformed;
     }
 
-    template<class AssociativeContainer>
-    void remove_associative(AssociativeContainer& container, const typename AssociativeContainer::mapped_type& value)
+    template<class AssociativeContainer, class Remover>
+    void remove_associative(AssociativeContainer& container, Remover&& rm)
     {
+        using mapped_t = typename AssociativeContainer::mapped_type;
+
+        auto check = [&rm](const mapped_t& value)
+        {
+            if constexpr (is_invocable_r_v<bool, remove_reference_t<Remover>, mapped_t>)
+                return rm(value);
+            else
+                return value == rm;
+        };
+
         for (auto i = begin(container); i != end(container);)
         {
-            if (value == i->second)
+            if (check(i->second))
                 i = container.erase(i);
             else
                 ++i;
         }
-    }
-
-    template<class AssociativeContainer, class Predicate>
-    void remove_if_associative(AssociativeContainer& container, Predicate&& p)
-    {
-        for (auto i = begin(container); i != end(container);)
-            if (p(*i))
-                i = container.erase(i);
-            else
-                ++i;
     }
 
     class spinlock
