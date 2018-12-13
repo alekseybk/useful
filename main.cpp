@@ -1,3 +1,9 @@
+/*
+ * Copyright Aleksey Verkholat 2018 - ...
+ * Distributed under the Boost Software License, Version 1.0.
+ * See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt
+*/
+
 #include <bits/stdc++.h>
 
 #include "useful.hpp"
@@ -8,27 +14,8 @@ using namespace uf::basic_types;
 using namespace uf::basic_types::literals;
 
 
-
-auto& f(const int&a)
-{
-    return a;
-}
-
-auto& f(int& a)
-{
-    return a;
-}
-
 int main()
 {
-    int x = 1;
-    static_assert (is_same_v<decltype(f(x)), int&>);
-
-    string a = "123";
-    const string b = "124";
-    string c = "121";
-    auto& cr = uf::min_ref(a, b, c);
-    //cr[0] = '6';
-    cout << c << endl;
+    cout << uf::utils::max(1, 2, 3, -1) << endl;
     return 0;
 }

@@ -1,3 +1,9 @@
+/*
+ * Copyright Aleksey Verkholat 2018 - ...
+ * Distributed under the Boost Software License, Version 1.0.
+ * See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt
+*/
+
 #pragma once
 #include <vector>
 #include <functional>
@@ -16,8 +22,6 @@ namespace uf
     using std::atomic_flag;
 
     using std::enable_if_t;
-    using std::true_type;
-    using std::false_type;
     using std::remove_const_t;
     using std::remove_reference_t;
     using std::remove_pointer_t;
@@ -34,8 +38,12 @@ namespace uf
     using std::is_invocable_v;
     using std::is_invocable_r_v;
 
+    using std::true_type;
+    using std::false_type;
     using std::index_sequence;
     using std::make_index_sequence;
+
+    using std::declval;
 
     namespace basic_types
     {
@@ -111,18 +119,6 @@ namespace uf
             struct tuple_remove_first_helper<Tuple, integral_constant<size_t, tuple_size_v<Tuple>>, Ts...>
             {
                 using type = tuple<Ts...>;
-            };
-
-            template<typename TargetWrapper, typename Tuple, size_t N, typename... Types>
-            struct tuple_apply_to_target_helper
-            {
-                using type = typename tuple_apply_to_target_helper<TargetWrapper, Tuple, N - 1u, tuple_element_t<N - 1u, Tuple>, Types...>::type;
-            };
-
-            template<typename TargetWrapper, typename Tuple, typename... Types>
-            struct tuple_apply_to_target_helper<TargetWrapper, Tuple, 0u, Types...>
-            {
-                using type = typename TargetWrapper::template type<Types...>;
             };
 
             template<typename TupleA, typename IndexA, typename TupleB, typename IndexB, typename... Types>
@@ -221,6 +217,15 @@ namespace uf
                 using type = tuple<Types...>;
             };
 
+            template<template<typename...> typename Clean, typename Tuple>
+            struct tuple_apply_to_clean_helper;
+
+            template<template<typename...> typename Clean, typename... Ts>
+            struct tuple_apply_to_clean_helper<Clean, tuple<Ts...>>
+            {
+                using type = Clean<Ts...>;
+            };
+
             template<template<typename...> typename Expected, typename Tested>
             struct is_same_tmpl_helper : public false_type { };
 
@@ -237,31 +242,6 @@ namespace uf
 
         template<class Tp>
         inline constexpr bool is_string_type_v = is_string_type<Tp>::value;
-
-        template<template<typename...> typename Target>
-        struct tmpl_add_args
-        {
-            template<typename... Types>
-            using type = Target<Types...>;
-        };
-
-        template<template<typename...> typename Target, typename... Ts>
-        using tmpl_add_args_t = typename tmpl_add_args<Target>::template type<Ts...>;
-
-        template<typename Tp>
-        struct tmpl_remove_args;
-
-        template<template<typename...> typename Tp, typename... Ts>
-        struct tmpl_remove_args<Tp<Ts...>>
-        {
-            template<typename... Args>
-            using type = Tp<Args...>;
-
-            using args = tuple<Ts...>;
-        };
-
-        template<typename Tp>
-        using tmpl_remove_args_t = typename tmpl_remove_args<Tp>::type;
 
         template<typename Tuple, typename = enable_if_t<(tuple_size_v<Tuple> >= 1u)>>
         struct tuple_remove_last
@@ -317,18 +297,6 @@ namespace uf
         template<typename Tuple, typename... Types>
         using tuple_push_front_t = typename tuple_push_front<Tuple, Types...>::type;
 
-        template<template<typename...> typename Target, typename Tuple>
-        struct tuple_apply_to_target
-        {
-            using type = typename detail::tuple_apply_to_target_helper<tmpl_add_args<Target>, Tuple, tuple_size_v<Tuple>>::type;
-        };
-
-        template<template<typename...> typename Target, typename Tuple>
-        using tuple_apply_to_target_t = typename tuple_apply_to_target<Target, Tuple>::type;
-
-        template<template<typename...> typename Target, typename Tuple, size_t... Indexes>
-        using tuple_apply_to_target_index_t = Target<tuple_element_t<Indexes, Tuple>...>;
-
         template<typename... Tuples>
         struct tuple_concat
         {
@@ -356,14 +324,35 @@ namespace uf
         template<typename Tp, size_t Index, typename Tuple>
         using tuple_replace_index_t = typename tuple_replace_index<Tp, Index, Tuple>::type;
 
-        template<template<typename...> typename Expected, typename Tested>
-        struct is_same_tmpl
+        template<template<typename...> typename Clean, typename Tuple>
+        struct tuple_apply_to_clean
         {
-            static constexpr bool value = detail::is_same_tmpl_helper<Expected, Tested>::value;
+            using type = typename detail::tuple_apply_to_clean_helper<Clean, Tuple>::type;
+        };
+
+        template<template<typename...> typename Clean, typename Tuple>
+        using tuple_apply_to_clean_t = typename tuple_apply_to_clean<Clean, Tuple>::type;
+
+        template<typename Tp>
+        struct clean;
+
+        template<template<typename...> typename Tp, typename... Ts>
+        struct clean<Tp<Ts...>>
+        {
+            template<typename... Types>
+            using type = Tp<Types...>;
+
+            using args_tuple = tuple<Ts...>;
         };
 
         template<template<typename...> typename Expected, typename Tested>
-        inline constexpr bool is_same_tmpl_v =  is_same_tmpl<Expected, Tested>::value;
+        struct is_same_tmpl
+        {
+            static constexpr bool value = detail::is_same_tmpl_helper<Expected, decay_t<Tested>>::value;
+        };
+
+        template<template<typename...> typename Expected, typename Tested>
+        inline constexpr bool is_same_tmpl_v =  is_same_tmpl<Expected, decay_t<Tested>>::value;
 
         template<typename... Ts>
         using first_t = tuple_element_t<0, tuple<Ts...>>;
@@ -383,10 +372,10 @@ namespace uf
         inline constexpr bool is_same_all_v = is_same_all<Ts...>::value;
 
         template<class Function>
-        struct function_assistant;
+        struct function_info;
 
         template<class R, class... Args>
-        struct function_assistant<function<R(Args...)>>
+        struct function_info<function<R(Args...)>>
         {
             static constexpr size_t arg_n = sizeof...(Args);
 
@@ -398,106 +387,91 @@ namespace uf
     }
     // end namespace meta
 
-    namespace std_extension
+    namespace utils
     {
-        template<typename UContainer, typename E>
+        namespace detail
+        {
+            template<bool Minimum, typename Result, typename... Ts, enable_if_t<!meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
+            constexpr auto min_max_1(Ts&&... args)
+            {
+                static_assert(is_same_v<Result, decay_t<Result>>);
+
+                Result m;
+                m = *std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
+                if constexpr (Minimum)
+                    ((m = (args < m) ? std::forward<Ts>(args) : std::move(m)), ...);
+                else
+                    ((m = (args > m) ? std::forward<Ts>(args) : std::move(m)), ...);
+                return m;
+            }
+
+            template<bool Minimum, typename Result, typename... Ts, enable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
+            constexpr auto min_max_1(Ts&&... args)
+            {
+                static_assert(is_same_v<Result, decay_t<Result>>);
+                using type = decay_t<meta::first_t<Ts...>>;
+
+                const type* m = std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
+                if constexpr (Minimum)
+                    ((m = (args < *m) ? &args : m), ...);
+                else
+                    ((m = (args > *m) ? &args : m), ...);
+                if constexpr (is_same_v<Result, type>)
+                    return *m;
+                else
+                    return Result(*m);
+            }
+
+            template<bool Minimum, typename... Ts>
+            constexpr auto& min_max_ref_1(Ts&&... args)
+            {
+                static_assert((is_lvalue_reference_v<Ts> && ...) && meta::is_same_all_v<decay_t<Ts>...>, "All arguments must be an lvalues of the same type");
+                using type = conditional_t<(is_const_v<remove_reference_t<Ts>> || ...),
+                                           const remove_reference_t<meta::first_t<Ts...>>,
+                                           remove_reference_t<meta::first_t<Ts...>>>;
+
+                reference_wrapper<type> m = *std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
+                if constexpr (Minimum)
+                    ((m = (args < m.get()) ? reference_wrapper<type>(args) : m), ...);
+                else
+                    ((m = (args > m.get()) ? reference_wrapper<type>(args) : m), ...);
+                return m.get();
+            }
+        }
+        // end namespace detail
+
+        template<typename Owner, typename E>
         constexpr auto&& fwd_elem(E&& e)
         {
+            using type = remove_reference_t<E>;
+
             if constexpr (!is_lvalue_reference_v<E>)
-                return static_cast<remove_reference_t<E>&&>(e);
-            else if constexpr (is_lvalue_reference_v<UContainer>)
-                return static_cast<remove_reference_t<E>&>(e);
+                return static_cast<type&&>(e);
+            else if constexpr (is_lvalue_reference_v<Owner>)
+                return static_cast<type&>(e);
             else
-                return static_cast<remove_reference_t<E>&&>(e);
+                return static_cast<type&&>(e);
         }
 
-        template<typename Result, typename... Ts, enable_if_t<!(meta::is_same_all_v<decay_t<Ts>...>), int> = 0>
-        constexpr auto min(Ts&&... args)
-        {
-            static_assert(is_same_v<Result, decay_t<Result>>);
-
-            Result m = *std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-            ((m = (args < m) ? std::forward<Ts>(args) : std::move(m)), ...);
-            return m;
-        }
-
-        template<typename Result, typename... Ts, enable_if_t<(meta::is_same_all_v<decay_t<Ts>...>), int> = 0>
-        constexpr auto min(Ts&&... args)
-        {
-            static_assert(is_same_v<Result, decay_t<Result>>);
-            using type = decay_t<meta::first_t<Ts...>>;
-
-            const type* m = std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-            ((m = (args < *m) ? &args : m), ...);
-
-            if constexpr (is_same_v<Result, type>)
-                return *m;
-            else
-                return Result(*m);
-        }
+        template<typename Result, typename... Ts>
+        constexpr auto min(Ts&&... args) { return detail::min_max_1<true, Result>(std::forward<Ts>(args)...); }
 
         template<typename... Ts>
-        constexpr auto min(Ts&&... args) { return min<decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...); }
+        constexpr auto min(Ts&&... args) { return detail::min_max_1<true, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...); }
 
         template<typename... Ts>
-        constexpr auto& min_ref(Ts&&... args)
-        {
-            static_assert((is_lvalue_reference_v<Ts> && ...) && meta::is_same_all_v<decay_t<Ts>...>, "All arguments must be an lvalues of the same type");
-            using type = conditional_t<(is_const_v<remove_reference_t<Ts>> || ...),
-                                       const remove_reference_t<meta::first_t<Ts...>>,
-                                       remove_reference_t<meta::first_t<Ts...>>>;
+        constexpr auto& min_ref(Ts&&... args) { return detail::min_max_ref_1<true, Ts...>(std::forward<Ts>(args)...); }
 
-            reference_wrapper<type> m = *std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-            ((m = (args < m.get()) ? reference_wrapper<type>(args) : m), ...);
-            return m.get();
-        }
-
-        // TODO: remove max copypast
-
-        template<typename Result, typename... Ts, enable_if_t<!(meta::is_same_all_v<decay_t<Ts>...>), int> = 0>
-        constexpr auto max(Ts&&... args)
-        {
-            static_assert(is_same_v<Result, decay_t<Result>>);
-
-            Result m = *std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-            ((m = (args > m) ? std::forward<Ts>(args) : std::move(m)), ...);
-            return m;
-        }
-
-        template<typename Result, typename... Ts, enable_if_t<(meta::is_same_all_v<decay_t<Ts>...>), int> = 0>
-        constexpr auto max(Ts&&... args)
-        {
-            static_assert(is_same_v<Result, decay_t<Result>>);
-            using type = decay_t<meta::first_t<Ts...>>;
-
-            const type* m = std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-            ((m = (args > *m) ? &args : m), ...);
-
-            if constexpr (is_same_v<Result, type>)
-                return *m;
-            else
-                return Result(*m);
-        }
+        template<typename Result, typename... Ts>
+        constexpr auto max(Ts&&... args) { return detail::min_max_1<false, Result>(std::forward<Ts>(args)...); }
 
         template<typename... Ts>
-        constexpr auto max(Ts&&... args) { return max<decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...); }
+        constexpr auto max(Ts&&... args) { return detail::min_max_1<false, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...); }
 
         template<typename... Ts>
-        constexpr auto& max_ref(Ts&&... args)
-        {
-            static_assert((is_lvalue_reference_v<Ts> && ...) && meta::is_same_all_v<decay_t<Ts>...>, "All arguments must be an lvalues of the same type");
-            using type = conditional_t<(is_const_v<remove_reference_t<Ts>> || ...),
-                                       const remove_reference_t<meta::first_t<Ts...>>,
-                                       remove_reference_t<meta::first_t<Ts...>>>;
-
-            reference_wrapper<type> m = *std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-            ((m = (args > m.get()) ? reference_wrapper<type>(args) : m), ...);
-            return m.get();
-        }
+        constexpr auto& max_ref(Ts&&... args) { return detail::min_max_ref_1<false, Ts...>(std::forward<Ts>(args)...); }
     }
-    // end namespace std_extension
-
-    using namespace std_extension;
+    // end namespace utils
 
     namespace detail
     {
@@ -515,7 +489,7 @@ namespace uf
         auto create_split_tuple(SplitVector&& vec, index_sequence<Indexes...>)
         {
             using elem_t = typename remove_reference_t<SplitVector>::value_type;
-            return meta::tuple_same_n_t<elem_t, sizeof...(Indexes)>{fwd_elem<SplitVector>(vec[Indexes])...};
+            return meta::tuple_same_n_t<elem_t, sizeof...(Indexes)>{utils::fwd_elem<SplitVector>(vec[Indexes])...};
         }
 
         template<size_t N, class Tuple, class ValueType>
@@ -586,13 +560,12 @@ namespace uf
     auto position_pairs(Container&& container)
     {
         using value_t = typename remove_reference_t<Container>::value_type;
-        using meta_t = meta::tmpl_remove_args<remove_reference_t<Container>>;
-        using result_t = typename meta_t::template type<pair<u64, value_t>>;
+        using result_t = typename meta::clean<remove_reference_t<Container>>::template type<pair<u64, value_t>>;
 
         u64 j = 0;
         result_t result;
         for (auto i = container.begin(); i != container.end(); ++i, ++j)
-            result.push_back({j, fwd_elem<Container>(*i)});
+            result.push_back({j, utils::fwd_elem<Container>(*i)});
         return result;
     }
 
