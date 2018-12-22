@@ -16,6 +16,12 @@ using namespace uf::basic_types::literals;
 
 int main()
 {
-    cout << uf::utils::max(1, 2, 3, -1) << endl;
+    vector<int> a{1, 2, 3, 4};
+    auto r = uf::split(a, [](const auto& c, auto i)
+    {
+        static_assert(std::is_same_v<decltype(c), const vector<int>&>);
+        return *i == 3;
+    });
+    cout << r.size() << endl;
     return 0;
 }

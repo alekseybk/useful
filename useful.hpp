@@ -492,39 +492,35 @@ namespace uf
             return meta::tuple_same_n_t<elem_t, sizeof...(Indexes)>{utils::fwd_elem<SplitVector>(vec[Indexes])...};
         }
 
-        template<size_t N, class Tuple, class ValueType>
-        bool split_check_helper(Tuple&& t, const ValueType& v)
+        template<class Container, class Delimiter, class... Delimiters>
+        bool split_point_helper(const Container& c, typename Container::const_iterator i, Delimiter& d, Delimiters&... delimiters)
         {
-            using tpl_t = remove_reference_t<Tuple>;
-
-            if constexpr (N == tuple_size_v<tpl_t>)
-                return false;
+            bool result;
+            if constexpr (is_invocable_r_v<bool, Delimiter, const typename Container::value_type&>)
+                result = d(*i);
+            else if constexpr (is_invocable_r_v<bool, Delimiter, const Container&, typename Container::const_iterator>)
+                result = d(c, i);
             else
-            {
-                bool result;
-                if constexpr (is_invocable_r_v<bool, remove_reference_t<tuple_element_t<N, tpl_t>>, const ValueType&> &&
-                              !is_same_v<decay_t<tuple_element_t<N, tpl_t>>, decay_t<ValueType>>)
-                    result = std::get<N>(t)(v);
-                else
-                    result = (v == std::get<N>(t));
-                if (result)
-                    return true;
-                return split_check_helper<N + 1>(t, v);
-            }
+                result = (*i == d);
+            if (result)
+                return true;
+            if constexpr (sizeof...(Delimiters))
+                return split_point_helper(c, i, delimiters...);
+            else
+                return false;
         }
     }
     // end namesapce detail
 
     template<class Container, class... Delimiters>
-    auto split(Container&& container, Delimiters&&... delimiters)
+    auto split(const Container& container, Delimiters&&... delimiters)
     {
         using container_t = remove_reference_t<Container>;
         using iterator_t = typename container_t::const_iterator;
-        using value_t = typename iterator_t::value_type;
 
-        auto check = [&delimiters...](const value_t& value) -> bool
+        auto split_point = [&container, &delimiters...](iterator_t i) -> bool
         {
-            return detail::split_check_helper<0>(tuple{delimiters...}, value);
+            return detail::split_point_helper(container, i, delimiters...);
         };
 
         bool empty_seq = true;
@@ -533,24 +529,24 @@ namespace uf
         {
             if (empty_seq)
             {
-                if (check(*i))
+                if (split_point(i))
                     continue;
                 empty_seq = false;
                 bounds.push_back({i, container.cend()});
                 continue;
             }
-            if (check(*i))
+            if (split_point(i))
             {
                 bounds.back().second = i;
                 empty_seq = true;
             }
         }
-
         return detail::create_split_vector<container_t>(std::move(bounds));
     }
 
+    /// return N-sized tuple instead of vector
     template<u64 N, class Container, class... Delimiters>
-    auto split(Container&& container, Delimiters&&... delimiters)
+    auto split(const Container& container, Delimiters&&... delimiters)
     {
         auto temp = split(std::forward<Container>(container), std::forward<Delimiters>(delimiters)...);
         return detail::create_split_tuple(std::move(temp), make_index_sequence<N>());
