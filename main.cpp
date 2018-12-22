@@ -10,8 +10,8 @@
 
 using namespace std;
 
-using namespace uf::basic_types;
-using namespace uf::basic_types::literals;
+using namespace uf::short_integer_types;
+using namespace uf::short_integer_types::literals;
 
 using namespace uf::print_overloads;
 

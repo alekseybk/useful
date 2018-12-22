@@ -45,7 +45,7 @@ namespace uf
 
     using std::declval;
 
-    namespace short_types
+    namespace short_integer_types
     {
         using u8 = uint8_t;
         using i8 = int8_t;
@@ -75,10 +75,10 @@ namespace uf
         }
         // end namespace literals
     }
-    // end namespace short_types
+    // end namespace short_integer_types
 
-    using namespace short_types;
-    using namespace short_types::literals;
+    using namespace short_integer_types;
+    using namespace short_integer_types::literals;
 
     namespace meta
     {
