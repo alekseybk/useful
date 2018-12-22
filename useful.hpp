@@ -45,7 +45,7 @@ namespace uf
 
     using std::declval;
 
-    namespace basic_types
+    namespace short_types
     {
         using u8 = uint8_t;
         using i8 = int8_t;
@@ -75,10 +75,10 @@ namespace uf
         }
         // end namespace literals
     }
-    // end namespace basic_types
+    // end namespace short_types
 
-    using namespace basic_types;
-    using namespace basic_types::literals;
+    using namespace short_types;
+    using namespace short_types::literals;
 
     namespace meta
     {
@@ -231,6 +231,18 @@ namespace uf
 
             template<template<typename...> typename Expected, typename... Ts>
             struct is_same_tmpl_helper<Expected, Expected<Ts...>> : public true_type { };
+
+            template<size_t Begin, size_t End, size_t... Ns>
+            struct make_custom_index_sequence_helper
+            {
+                using type = typename make_custom_index_sequence_helper<Begin + 1, End, Ns..., Begin>::type;
+            };
+
+            template<size_t End, size_t... Ns>
+            struct make_custom_index_sequence_helper<End, End, Ns...>
+            {
+                using type = index_sequence<Ns...>;
+            };
         }
         // end namespace detail
 
@@ -384,6 +396,9 @@ namespace uf
             template<size_t N>
             using arg_t = tuple_element_t<N, tuple<Args...>>;
         };
+
+        template<size_t Begin, size_t End>
+        using make_custom_index_sequence = typename detail::make_custom_index_sequence_helper<Begin, End>::type;
     }
     // end namespace meta
 
@@ -473,6 +488,87 @@ namespace uf
     }
     // end namespace utils
 
+    namespace print_overloads
+    {
+        namespace detail
+        {
+            template<typename Tp, typename = void>
+            struct printer
+            {
+                template<typename Stream>
+                static void print(Stream& stream, const Tp& value)
+                {
+                    stream << value;
+                }
+            };
+
+            template<class Container>
+            struct printer<Container, std::void_t<decltype(declval<Container>().begin()), decltype(declval<Container>().end())>>
+            {
+                template<typename Stream>
+                static void print(Stream& stream, const Container& container)
+                {
+                    using value_type = typename Container::value_type;
+
+                    stream << "c" << container.size() << "[";
+                    auto i = container.cbegin();
+                    if (!container.empty())
+                        printer<decay_t<value_type>>::print(stream, *i);
+                    ++i;
+                    for (; i != container.cend(); ++i)
+                    {
+                        stream << ", ";
+                        printer<decay_t<value_type>>::print(stream, *i);
+                    }
+                    stream << "]";
+                }
+            };
+
+            template<typename... Ts>
+            struct printer<tuple<Ts...>>
+            {
+                template<typename Stream, size_t... Ns>
+                static void helper(Stream& stream, const tuple<Ts...>& t, std::index_sequence<Ns...>)
+                {
+                    ((stream << ", ", printer<decay_t<tuple_element_t<Ns, tuple<Ts...>>>>::print(stream, std::get<Ns>(t))), ...);
+                }
+
+                template<typename Stream>
+                static void print(Stream& stream, const tuple<Ts...>& t)
+                {
+                    stream << "t[";
+                    if (sizeof...(Ts))
+                    {
+                        printer<decay_t<std::tuple_element_t<0, tuple<Ts...>>>>::print(stream, std::get<0>(t));
+                        helper(stream, t, meta::make_custom_index_sequence<1, sizeof...(Ts)>());
+                    }
+                    stream << "]";
+                }
+            };
+
+            template<typename F, typename S>
+            struct printer<pair<F, S>>
+            {
+                template<typename Stream>
+                static void print(Stream& stream, const pair<F, S>& p)
+                {
+                    stream << "p[";
+                    printer<decay_t<F>>::print(stream, p.first);
+                    stream << ", ";
+                    printer<decay_t<S>>::print(stream, p.second);
+                    stream << "]";
+                }
+            };
+        }
+
+        template<typename Stream, typename Object, typename = std::enable_if_t<std::is_base_of_v<std::ios_base, decay_t<Stream>>>>
+        Stream& operator<<(Stream& stream, const Object& object)
+        {
+            detail::printer<decay_t<Object>>::print(stream, object);
+            return stream;
+        }
+    }
+
     namespace detail
     {
         template<class Container, class Bounds>
@@ -493,7 +589,7 @@ namespace uf
         }
 
         template<class Container, class Delimiter, class... Delimiters>
-        bool split_point_helper(const Container& c, typename Container::const_iterator i, Delimiter& d, Delimiters&... delimiters)
+        bool split_point_helper(const Container& c, typename Container::const_iterator i, Delimiter&& d, Delimiters&&... delimiters)
         {
             bool result;
             if constexpr (is_invocable_r_v<bool, Delimiter, const typename Container::value_type&>)
@@ -566,7 +662,7 @@ namespace uf
     }
 
     template<class Container, class Compare>
-    auto sort_save_position(Container&& container, const Compare& comp)
+    auto sort_save_position(Container&& container, Compare&& comp)
     {
         auto transformed = position_pairs(std::forward<Container>(container));
         sort(transformed.begin(), transformed.end(), [&comp](const auto& a, const auto& b)
@@ -583,13 +679,13 @@ namespace uf
 
         auto check = [&rm](const mapped_t& value)
         {
-            if constexpr (is_invocable_r_v<bool, remove_reference_t<Remover>, const mapped_t&> && !is_same_v<decay_t<Remover>, decay_t<mapped_t>>)
+            if constexpr (is_invocable_r_v<bool, remove_reference_t<Remover>, const mapped_t&>)
                 return rm(value);
             else
                 return value == rm;
         };
 
-        for (auto i = begin(container); i != end(container);)
+        for (auto i = container.begin(); i != container.end();)
         {
             if (check(i->second))
                 i = container.erase(i);

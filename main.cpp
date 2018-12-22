@@ -13,15 +13,13 @@ using namespace std;
 using namespace uf::basic_types;
 using namespace uf::basic_types::literals;
 
+using namespace uf::print_overloads;
 
 int main()
 {
-    vector<int> a{1, 2, 3, 4};
-    auto r = uf::split(a, [](const auto& c, auto i)
-    {
-        static_assert(std::is_same_v<decltype(c), const vector<int>&>);
-        return *i == 3;
-    });
-    cout << r.size() << endl;
+    vector<tuple<double, char>> x{{1.0, 'b'}, {5.5, 'x'}};
+    map<int, double> m;
+    m.insert({1, 4.4});
+    cout << m << endl << x << endl;
     return 0;
 }
