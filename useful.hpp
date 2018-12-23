@@ -243,9 +243,6 @@ namespace uf
             {
                 using type = index_sequence<Ns...>;
             };
-
-            template<bool Value, typename Tp>
-            using disable_if_t = enable_if_t<!Value, Tp>;
         }
         // end namespace detail
 
