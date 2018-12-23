@@ -243,6 +243,9 @@ namespace uf
             {
                 using type = index_sequence<Ns...>;
             };
+
+            template<bool Value, typename Tp>
+            using disable_if_t = enable_if_t<!Value, Tp>;
         }
         // end namespace detail
 
@@ -399,6 +402,18 @@ namespace uf
 
         template<size_t Begin, size_t End>
         using make_custom_index_sequence = typename detail::make_custom_index_sequence_helper<Begin, End>::type;
+
+        template<bool X, typename Tp = void>
+        using disable_if_t = enable_if_t<!X, Tp>;
+
+        template<class Tp, typename = void>
+        struct has_begin_end : public false_type { };
+
+        template<class Tp>
+        struct has_begin_end<Tp, std::void_t<decltype(declval<Tp>().begin()), decltype(declval<Tp>().end())>> : public true_type { };
+
+        template<class Tp>
+        inline constexpr bool has_begin_end_v = has_begin_end<Tp>::value;
     }
     // end namespace meta
 
@@ -492,82 +507,62 @@ namespace uf
     {
         namespace detail
         {
-            template<typename Tp, typename = void>
-            struct printer
+            template<class Stream, typename Tp, meta::disable_if_t<meta::has_begin_end_v<Tp>, int> = 0>
+            void print(Stream& stream, const Tp& value) { stream << value; }
+
+            template<class Stream, class Container, enable_if_t<meta::has_begin_end_v<Container>, int> = 0>
+            void print(Stream& stream, const Container& container)
             {
-                template<typename Stream>
-                static void print(Stream& stream, const Tp& value)
+                stream << "c" << container.size() << "[";
+                auto i = container.cbegin();
+                if (!container.empty())
+                    print(stream, *i);
+                ++i;
+                for (; i != container.cend(); ++i)
                 {
-                    stream << value;
-                }
-            };
-
-            template<class Container>
-            struct printer<Container, std::void_t<decltype(declval<Container>().begin()), decltype(declval<Container>().end())>>
-            {
-                template<typename Stream>
-                static void print(Stream& stream, const Container& container)
-                {
-                    using value_type = typename Container::value_type;
-
-                    stream << "c" << container.size() << "[";
-                    auto i = container.cbegin();
-                    if (!container.empty())
-                        printer<decay_t<value_type>>::print(stream, *i);
-                    ++i;
-                    for (; i != container.cend(); ++i)
-                    {
-                        stream << ", ";
-                        printer<decay_t<value_type>>::print(stream, *i);
-                    }
-                    stream << "]";
-                }
-            };
-
-            template<typename... Ts>
-            struct printer<tuple<Ts...>>
-            {
-                template<typename Stream, size_t... Ns>
-                static void helper(Stream& stream, const tuple<Ts...>& t, std::index_sequence<Ns...>)
-                {
-                    ((stream << ", ", printer<decay_t<tuple_element_t<Ns, tuple<Ts...>>>>::print(stream, std::get<Ns>(t))), ...);
-                }
-
-                template<typename Stream>
-                static void print(Stream& stream, const tuple<Ts...>& t)
-                {
-                    stream << "t[";
-                    if (sizeof...(Ts))
-                    {
-                        printer<decay_t<std::tuple_element_t<0, tuple<Ts...>>>>::print(stream, std::get<0>(t));
-                        helper(stream, t, meta::make_custom_index_sequence<1, sizeof...(Ts)>());
-                    }
-                    stream << "]";
-                }
-            };
-
-            template<typename F, typename S>
-            struct printer<pair<F, S>>
-            {
-                template<typename Stream>
-                static void print(Stream& stream, const pair<F, S>& p)
-                {
-                    stream << "p[";
-                    printer<decay_t<F>>::print(stream, p.first);
                     stream << ", ";
-                    printer<decay_t<S>>::print(stream, p.second);
-                    stream << "]";
+                    print(stream, *i);
                 }
-            };
+                stream << "]";
+            }
+
+            template<typename Stream, typename... Ts, size_t... Ns>
+            static void print_tuple_helper(Stream& stream, const tuple<Ts...>& t, std::index_sequence<Ns...>)
+            {
+                ((stream << ", ", print(stream, std::get<Ns>(t))), ...);
+            }
+
+            template<class Stream, typename... Ts>
+            void print(Stream& stream, const tuple<Ts...>& t)
+            {
+                stream << "t[";
+                if (sizeof...(Ts))
+                {
+                    print(stream, std::get<0>(t));
+                    print_tuple_helper(stream, t, meta::make_custom_index_sequence<1, sizeof...(Ts)>());
+                }
+                stream << "]";
+            }
+
+            template<typename Stream, typename F, typename S>
+            void print(Stream& stream, const pair<F, S>& p)
+            {
+                stream << "p[";
+                print(stream, p.first);
+                stream << ", ";
+                print(stream, p.second);
+                stream << "]";
+            }
         }
 
-        template<typename Stream, typename Object, typename = std::enable_if_t<std::is_base_of_v<std::ios_base, decay_t<Stream>>>>
-        Stream& operator<<(Stream& stream, const Object& object)
+        template<typename Object, typename... StreamArgs>
+        std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const Object& object)
         {
-            detail::printer<decay_t<Object>>::print(stream, object);
+            detail::print(stream, object);
             return stream;
         }
     }
+    // end namespace print_overloads
 
     namespace detail
     {

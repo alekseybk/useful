@@ -17,9 +17,17 @@ using namespace uf::print_overloads;
 
 int main()
 {
-    vector<tuple<double, char>> x{{1.0, 'b'}, {5.5, 'x'}};
-    map<int, double> m;
-    m.insert({1, 4.4});
-    cout << m << endl << x << endl;
+
+    vector<int> v{1, 2, 3};
+    cout << v << endl;
+
+    pair<int, double> p{1, 2.2};
+    cout << p << endl;
+    tuple<int, double> t{5, 5.5};
+    cout << t << endl;
+    vector<pair<char, char>> v2{{'x', 'x'}};
+    cout << v2 << endl;
+
+    //cout << uf::print_overloads::detail::is_container_v<int> << endl;
     return 0;
 }
