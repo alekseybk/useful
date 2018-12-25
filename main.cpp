@@ -20,6 +20,8 @@ using namespace std;
 using namespace uf::out_overloads;
 using namespace uf::in_overloads;
 
+
+
 int main()
 {
     //uf::utils::for_each_target<string>(uf::read_csv(ifstream("test.csv")), [](string& s){ s = uf::strip_sides(s, ' '); cout << s << endl; });

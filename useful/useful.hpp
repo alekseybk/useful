@@ -33,7 +33,7 @@ namespace uf
     // end namespace detail
 
     template<class Element, class P, class... Ps>
-    bool satisfies_one(const Element& e, P&& p, Ps&&... ps)
+    bool satisfies_one(const Element& e, const P& p, const Ps&... ps)
     {
         bool result;
         if constexpr (is_invocable_v<remove_reference_t<P>, const Element&>)
@@ -49,7 +49,7 @@ namespace uf
     }
 
     template<class Element, class P, class... Ps>
-    bool satisfies_all(const Element& e, P&& p, Ps&&... ps)
+    bool satisfies_all(const Element& e, const P& p, const Ps&... ps)
     {
         bool result;
         if constexpr (is_invocable_v<remove_reference_t<P>, const Element&>)
@@ -65,8 +65,8 @@ namespace uf
         return false;
     }
 
-    template<class Container, class... Delimiters>
-    auto split(const Container& c, Delimiters&&... ds)
+    template<class Container, class... Ds>
+    auto split(const Container& c, const Ds&... ds)
     {
         using container_t = remove_reference_t<Container>;
         using const_iterator_t = typename container_t::const_iterator;
@@ -93,10 +93,10 @@ namespace uf
     }
 
     /// return N-sized tuple instead of vector
-    template<u64 N, class Container, class... Delimiters>
-    auto split(const Container& container, Delimiters&&... delimiters)
+    template<u64 N, class Container, class... Ds>
+    auto split(const Container& c, const Ds&... ds)
     {
-        auto temp = split(std::forward<Container>(container), std::forward<Delimiters>(delimiters)...);
+        auto temp = split(c, ds...);
         return detail::create_split_tuple(std::move(temp), make_index_sequence<N>());
     }
 
@@ -223,7 +223,7 @@ namespace uf
     }
 
     template<class Container, class Compare>
-    auto sort_save_position(Container&& container, Compare&& comp)
+    auto sort_save_position(Container&& container, const Compare& comp)
     {
         auto transformed = position_pairs(std::forward<Container>(container));
         sort(transformed.begin(), transformed.end(), [&comp](const auto& a, const auto& b)
@@ -234,7 +234,7 @@ namespace uf
     }
 
     template<class AssociativeContainer, class... Rs>
-    void remove_associative_by_key(AssociativeContainer& container, Rs&&... rms)
+    void remove_associative_by_key(AssociativeContainer& container, const Rs&... rms)
     {
         using value_type = typename AssociativeContainer::value_type;
 
@@ -253,7 +253,7 @@ namespace uf
     }
 
     template<class AssociativeContainer, class... Rs>
-    void remove_associative_by_value(AssociativeContainer& container, Rs&&... rms)
+    void remove_associative_by_value(AssociativeContainer& container, const Rs&... rms)
     {
         using value_type = typename AssociativeContainer::value_type;
 

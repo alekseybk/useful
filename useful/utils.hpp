@@ -76,7 +76,7 @@ namespace uf
         }
 
         template<typename TargetType, typename Tp, typename F>
-        void for_each_target(Tp&& container, F&& f)
+        void for_each_target(Tp&& container, const F& f)
         {
             using value_type = decay_t<typename remove_reference_t<Tp>::value_type>;
 
