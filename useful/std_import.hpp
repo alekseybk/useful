@@ -15,6 +15,7 @@
 #include <utility>
 #include <atomic>
 #include <thread>
+#include <sstream>
 
 #include "short_int.hpp"
 
@@ -22,6 +23,8 @@ namespace uf
 {
     using namespace short_int;
     using namespace short_int::literals;
+
+    using namespace std::literals;
 
     using std::vector;
     using std::string;
@@ -33,10 +36,13 @@ namespace uf
     using std::function;
     using std::atomic;
     using std::atomic_flag;
+    using std::stringstream;
+    using std::runtime_error;
 
     using std::enable_if_t;
     using std::void_t;
     using std::remove_const_t;
+    using std::remove_cv_t;
     using std::remove_reference_t;
     using std::remove_pointer_t;
     using std::conditional_t;
@@ -58,5 +64,6 @@ namespace uf
     using std::integral_constant;
 
     using std::declval;
+    using std::to_string;
 }
 // end namesapce useful

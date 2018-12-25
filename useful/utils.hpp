@@ -75,6 +75,18 @@ namespace uf
                 return static_cast<type&&>(e);
         }
 
+        template<typename TargetType, typename Tp, typename F>
+        void for_each_target(Tp&& container, F&& f)
+        {
+            using value_type = decay_t<typename remove_reference_t<Tp>::value_type>;
+
+            if constexpr (is_same_v<decay_t<TargetType>, value_type>)
+                std::for_each(container.begin(), container.end(), f);
+            else
+                for (auto& value : container)
+                    for_each_target<TargetType>(forward_element<Tp>(value), f);
+        }
+
         template<typename Result, typename... Ts>
         constexpr auto min(Ts&&... args) { return detail::min_max_1<true, Result>(std::forward<Ts>(args)...); }
 

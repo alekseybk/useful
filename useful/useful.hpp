@@ -6,6 +6,8 @@
 
 #pragma once
 #include "utils.hpp"
+#include "in_overloads.hpp"
+#include "out_overloads.hpp"
 
 namespace uf
 {
@@ -27,51 +29,61 @@ namespace uf
             using elem_t = typename remove_reference_t<SplitVector>::value_type;
             return meta::tuple_same_n_t<elem_t, sizeof...(Indexes)>{utils::forward_element<SplitVector>(vec[Indexes])...};
         }
-
-        template<class Container, class Delimiter, class... Delimiters>
-        bool split_point_helper(const Container& c, typename Container::const_iterator i, Delimiter&& d, Delimiters&&... delimiters)
-        {
-            bool result;
-            if constexpr (is_invocable_r_v<bool, Delimiter, const typename Container::value_type&>)
-                result = d(*i);
-            else if constexpr (is_invocable_r_v<bool, Delimiter, const Container&, typename Container::const_iterator>)
-                result = d(c, i);
-            else
-                result = (*i == d);
-            if (result)
-                return true;
-            if constexpr (sizeof...(Delimiters))
-                return split_point_helper(c, i, delimiters...);
-            else
-                return false;
-        }
     }
     // end namespace detail
 
+    template<class Element, class P, class... Ps>
+    bool satisfies_one(const Element& e, P&& p, Ps&&... ps)
+    {
+        bool result;
+        if constexpr (is_invocable_v<remove_reference_t<P>, const Element&>)
+            result = p(e);
+        else
+            result = (e == p);
+        if (result)
+            return true;
+        if constexpr (sizeof...(Ps))
+            return satisfies_one(e, ps...);
+        else
+            return false;
+    }
+
+    template<class Element, class P, class... Ps>
+    bool satisfies_all(const Element& e, P&& p, Ps&&... ps)
+    {
+        bool result;
+        if constexpr (is_invocable_v<remove_reference_t<P>, const Element&>)
+            result = p(e);
+        else
+            result = (e == p);
+        if (result)
+        {
+            if constexpr (sizeof...(Ps))
+                return satisfies_all(e, ps...);
+            return true;
+        }
+        return false;
+    }
+
     template<class Container, class... Delimiters>
-    auto split(const Container& container, Delimiters&&... delimiters)
+    auto split(const Container& c, Delimiters&&... ds)
     {
         using container_t = remove_reference_t<Container>;
-        using iterator_t = typename container_t::const_iterator;
-
-        auto split_point = [&container, &delimiters...](iterator_t i) -> bool
-        {
-            return detail::split_point_helper(container, i, delimiters...);
-        };
+        using const_iterator_t = typename container_t::const_iterator;
 
         bool empty_seq = true;
-        vector<pair<iterator_t, iterator_t>> bounds;
-        for (auto i = container.cbegin(); i != container.cend(); ++i)
+        vector<pair<const_iterator_t, const_iterator_t>> bounds;
+        for (auto i = c.cbegin(); i != c.cend(); ++i)
         {
             if (empty_seq)
             {
-                if (split_point(i))
+                if (satisfies_one(*i, ds...))
                     continue;
                 empty_seq = false;
-                bounds.push_back({i, container.cend()});
+                bounds.push_back({i, c.cend()});
                 continue;
             }
-            if (split_point(i))
+            if (satisfies_one(*i, ds...))
             {
                 bounds.back().second = i;
                 empty_seq = true;
@@ -141,8 +153,9 @@ namespace uf
     }
 
     template<class Stream>
-    vector<vector<string>> read_csv(Stream&& stream, char delimiter = ',')
+    vector<vector<string>> read_csv(Stream&& stream, char delimiter = ',') noexcept(false)
     {
+        u64 cols = 0;
         vector<vector<string>> result;
 
         string record;
@@ -185,6 +198,11 @@ namespace uf
             if (!qstate)
             {
                 line.push_back(std::move(record));
+                if (cols == 0)
+                    cols = line.size();
+                if (line.size() != cols)
+                    throw runtime_error("invalid line "s + to_string(result.size()) +
+                                        ", size = " + to_string(line.size()) + ", expected = " + to_string(cols));
                 result.push_back(std::move(line));
             }
         }
@@ -215,22 +233,38 @@ namespace uf
         return transformed;
     }
 
-    template<class AssociativeContainer, class Remover>
-    void remove_associative(AssociativeContainer& container, Remover&& rm)
+    template<class AssociativeContainer, class... Rs>
+    void remove_associative_by_key(AssociativeContainer& container, Rs&&... rms)
     {
-        using mapped_t = typename AssociativeContainer::mapped_type;
+        using value_type = typename AssociativeContainer::value_type;
 
-        auto check = [&rm](const mapped_t& value)
+        for (auto i = container.cbegin(); i != container.cend();)
         {
-            if constexpr (is_invocable_r_v<bool, remove_reference_t<Remover>, const mapped_t&>)
-                return rm(value);
+            bool result;
+            if constexpr (meta::is_pair_v<value_type>)
+                result = satisfies_one(i->first, rms...);
             else
-                return value == rm;
-        };
+                result = satisfies_one(*i, rms...);
+            if (result)
+                i = container.erase(i);
+            else
+                ++i;
+        }
+    }
 
-        for (auto i = container.begin(); i != container.end();)
+    template<class AssociativeContainer, class... Rs>
+    void remove_associative_by_value(AssociativeContainer& container, Rs&&... rms)
+    {
+        using value_type = typename AssociativeContainer::value_type;
+
+        for (auto i = container.cbegin(); i != container.cend();)
         {
-            if (check(i->second))
+            bool result;
+            if constexpr (meta::is_pair_v<value_type>)
+                result = satisfies_one(i->second, rms...);
+            else
+                result = satisfies_one(*i, rms...);
+            if (result)
                 i = container.erase(i);
             else
                 ++i;

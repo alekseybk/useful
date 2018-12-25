@@ -19,13 +19,11 @@ namespace uf
             template<class Stream, class Container, enable_if_t<meta::has_begin_end_v<Container>, int> = 0>
             void print(Stream& stream, const Container& container)
             {
-                stream << "c" << container.size() << "[";
                 auto i = container.cbegin();
                 if (!container.empty())
                     stream << *i++;
                 for (; i != container.cend(); ++i)
                     stream << ", " << *i;
-                stream << "]";
             }
 
             template<typename Stream, typename... Ts, u64... Ns>
@@ -37,19 +35,17 @@ namespace uf
             template<class Stream, typename... Ts>
             void print(Stream& stream, const tuple<Ts...>& t)
             {
-                stream << "t[";
                 if constexpr (sizeof...(Ts))
                 {
                     stream << std::get<0>(t);
                     print_tuple_helper(stream, t, meta::make_custom_index_sequence<1, sizeof...(Ts)>());
                 }
-                stream << "]";
             }
 
             template<typename Stream, typename F, typename S>
             void print(Stream& stream, const pair<F, S>& p)
             {
-                stream << "p[" << p.first << ", " << p.second << "]";
+                stream << p.first << ", " << p.second;
             }
         }
         // end namespace detail

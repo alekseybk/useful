@@ -1,5 +1,5 @@
 /*
- * Copyright Aleksey Verkholat 2018 - ...
+ * Copyright Aleksey Verkholat 2018
  * Distributed under the Boost Software License, Version 1.0.
  * See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt
 */
@@ -180,6 +180,33 @@ namespace uf
 
         template<typename Tp, typename... Ts>
         inline constexpr bool is_one_of_the_v = (is_same_v<Tp, Ts> || ...);
+
+        template<typename Tp, typename... Ts>
+        inline constexpr bool is_all_of_the_v = (is_same_v<Tp, Ts> && ...);
+
+        template<template<typename> typename P, typename... Ts>
+        inline constexpr bool is_one_of_the_p_v = (P<Ts>::value || ...);
+
+        template<template<typename> typename P, typename... Ts>
+        inline constexpr bool is_all_of_the_p_v = (P<Ts>::value && ...);
+
+        template<typename Tp>
+        struct is_tuple : public false_type { };
+
+        template<typename... Ts>
+        struct is_tuple<tuple<Ts...>> : public true_type { };
+
+        template<typename Tp>
+        inline constexpr bool is_tuple_v = is_tuple<Tp>::value;
+
+        template<typename Tp>
+        struct is_pair : public false_type { };
+
+        template<typename F, typename S>
+        struct is_pair<pair<F, S>> : public true_type { };
+
+        template<typename Tp>
+        inline constexpr bool is_pair_v = is_pair<Tp>::value;
 
         template<typename Tp>
         inline constexpr bool is_char_type_v = is_one_of_the_v<Tp, char, wchar_t, char16_t, char32_t>;
