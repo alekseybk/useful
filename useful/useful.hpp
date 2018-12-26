@@ -11,6 +11,9 @@
 
 namespace uf
 {
+    template<class Element, class P, class... Ps>
+    bool satisfies_one(const Element& e, const P& p, const Ps&... ps);
+
     namespace detail
     {
         template<class Container, class Bounds>
@@ -52,6 +55,30 @@ namespace uf
             }
             return result;
         }
+
+        template<bool ByKey, class AssociativeContainer, class... Rs>
+        void remove_associative_helper(AssociativeContainer& c, const Rs&... rms)
+        {
+            using value_type = typename AssociativeContainer::value_type;
+
+            for (auto i = c.cbegin(); i != c.cend();)
+            {
+                bool result;
+                if constexpr (meta::is_pair_v<value_type>)
+                {
+                    if constexpr (ByKey)
+                        result = satisfies_one(i->first, rms...);
+                    else
+                        result = satisfies_one(i->second, rms...);
+                }
+                else
+                    result = satisfies_one(*i, rms...);
+                if (result)
+                    i = c.erase(i);
+                else
+                    ++i;
+            }
+        }
     }
     // end namespace detail
 
@@ -76,21 +103,7 @@ namespace uf
     }
 
     template<class Element, class P, class... Ps>
-    bool satisfies_all(const Element& e, const P& p, const Ps&... ps)
-    {
-        bool result;
-        if constexpr (is_invocable_v<remove_reference_t<P>, const Element&>)
-            result = p(e);
-        else
-            result = (e == p);
-        if (result)
-        {
-            if constexpr (sizeof...(Ps))
-                return satisfies_all(e, ps...);
-            return true;
-        }
-        return false;
-    }
+    bool satisfies_all(const Element& e, const Ps&... ps) { return (satisfies_one(e, ps) && ...); }
 
     template<class Container, class... Ds>
     auto split(const Container& c, const Ds&... ds)
@@ -231,42 +244,13 @@ namespace uf
     }
 
     template<class AssociativeContainer, class... Rs>
-    void remove_associative_by_key(AssociativeContainer& container, const Rs&... rms)
-    {
-        using value_type = typename AssociativeContainer::value_type;
+    void remove_associative_by_key(AssociativeContainer& c, const Rs&... rms)
+    { detail::remove_associative_helper<true>(c, rms...); }
 
-        for (auto i = container.cbegin(); i != container.cend();)
-        {
-            bool result;
-            if constexpr (meta::is_pair_v<value_type>)
-                result = satisfies_one(i->first, rms...);
-            else
-                result = satisfies_one(*i, rms...);
-            if (result)
-                i = container.erase(i);
-            else
-                ++i;
-        }
-    }
 
     template<class AssociativeContainer, class... Rs>
-    void remove_associative_by_value(AssociativeContainer& container, const Rs&... rms)
-    {
-        using value_type = typename AssociativeContainer::value_type;
-
-        for (auto i = container.cbegin(); i != container.cend();)
-        {
-            bool result;
-            if constexpr (meta::is_pair_v<value_type>)
-                result = satisfies_one(i->second, rms...);
-            else
-                result = satisfies_one(*i, rms...);
-            if (result)
-                i = container.erase(i);
-            else
-                ++i;
-        }
-    }
+    void remove_associative_by_value(AssociativeContainer& c, const Rs&... rms)
+    { detail::remove_associative_helper<false>(c, rms...); }
 
     class spinlock
     {

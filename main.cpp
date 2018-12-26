@@ -24,10 +24,5 @@ using namespace uf::in_overloads;
 
 int main()
 {
-    cout << uf::strip("123 4"s, [](char c){return c == '4' || c == ' ' || c == '1';}) << endl;
-    cout << uf::strip_sides("123 4"s, [](char c){return c == '1' || c == '2' || c == '4' || c == ' ';}) << endl;
-    stringstream ss;
-    ss << "123, 124\n125, 126\n       ";
-    auto r = uf::read_csv(ss);
     return 0;
 }
