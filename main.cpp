@@ -24,13 +24,10 @@ using namespace uf::in_overloads;
 
 int main()
 {
-    //uf::utils::for_each_target<string>(uf::read_csv(ifstream("test.csv")), [](string& s){ s = uf::strip_sides(s, ' '); cout << s << endl; });
-
-    std::set<int> m{1, 2, 3, 4, 5};
-    uf::remove_associative_by_value(m, [](auto a){return a % 2 == 0;}, 1);
-    cout << m << endl;
-
-    //out << uf::split("123 124,125"s, ' ') << endl;
-
+    cout << uf::strip("123 4"s, [](char c){return c == '4' || c == ' ' || c == '1';}) << endl;
+    cout << uf::strip_sides("123 4"s, [](char c){return c == '1' || c == '2' || c == '4' || c == ' ';}) << endl;
+    stringstream ss;
+    ss << "123, 124\n125, 126\n       ";
+    auto r = uf::read_csv(ss);
     return 0;
 }

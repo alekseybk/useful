@@ -29,8 +29,35 @@ namespace uf
             using elem_t = typename remove_reference_t<SplitVector>::value_type;
             return meta::tuple_same_n_t<elem_t, sizeof...(Indexes)>{utils::forward_element<SplitVector>(vec[Indexes])...};
         }
+
+        template<bool Lowercase>
+        string ascii_lower_upper_case_helper(const string& s)
+        {
+            constexpr u64 dist = 'a' - 'A';
+            string result;
+            result.reserve(s.size());
+            for (auto c : s)
+            {
+                if constexpr (Lowercase)
+                {
+                    if (c >= 'A' && c <= 'Z')
+                        c += dist;
+                }
+                else
+                {
+                    if (c >= 'a' && c <= 'z')
+                        c -= dist;
+                }
+                result.push_back(c);
+            }
+            return result;
+        }
     }
     // end namespace detail
+
+    string ascii_lowercase(const string& s) { return detail::ascii_lower_upper_case_helper<true>(s); }
+
+    string ascii_uppercase(const string& s) { return detail::ascii_lower_upper_case_helper<false>(s); }
 
     template<class Element, class P, class... Ps>
     bool satisfies_one(const Element& e, const P& p, const Ps&... ps)
@@ -100,54 +127,24 @@ namespace uf
         return detail::create_split_tuple(std::move(temp), make_index_sequence<N>());
     }
 
-    template<class Str>
-    Str lowercase(const Str& s)
-    {
-        constexpr u64 dist = 'a' - 'A';
-        Str result;
-        result.reserve(s.size());
-        for (auto c : s)
-        {
-            if (c >= 'A' && c <= 'Z')
-                c += dist;
-            result.push_back(c);
-        }
-        return result;
-    }
-
-    template<class Str>
-    Str uppercase(const Str& s)
-    {
-        constexpr u64 dist = 'a' - 'A';
-        Str result;
-        result.reserve(s.size());
-        for (auto c : s)
-        {
-            if (c >= 'a' && c <= 'z')
-                c -= dist;
-            result.push_back(c);
-        }
-        return result;
-    }
-
-    template<class Container, typename... Elems>
-    Container strip(const Container& container, const Elems&... elems)
+    template<class Container, typename... Ps>
+    Container strip(const Container& c, const Ps&... ps)
     {
         Container result;
-        for (const auto& e : container)
-            if (((e != elems) && ...))
+        for (const auto& e : c)
+            if (!satisfies_one(e, ps...))
                 result.insert(result.end(), e);
         return result;
     }
 
-    template<class Container, typename... Elems>
-    Container strip_sides(const Container& container, const Elems&... elems)
+    template<class Container, typename... Ps>
+    Container strip_sides(const Container& c, const Ps&... ps)
     {
-        auto fwd = container.cbegin();
-        while (fwd != container.cend() && ((*fwd == elems) && ...))
+        auto fwd = c.cbegin();
+        while (fwd != c.cend() && satisfies_one(*fwd, ps...))
             ++fwd;
-        auto bck = container.crbegin();
-        while (bck != container.crend() && ((*bck == elems) && ...))
+        auto bck = c.crbegin();
+        while (bck != c.crend() && satisfies_one(*bck, ps...))
             ++bck;
         return Container(fwd, bck.base());
     }
