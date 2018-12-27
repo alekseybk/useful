@@ -16,6 +16,7 @@
 #include <atomic>
 #include <thread>
 #include <sstream>
+#include <chrono>
 
 #include "short_int.hpp"
 
@@ -25,6 +26,10 @@ namespace uf
     using namespace short_int::literals;
 
     using namespace std::literals;
+    using namespace std::chrono_literals;
+
+    namespace chrono = std::chrono;
+    namespace this_thread = std::this_thread;
 
     using std::vector;
     using std::string;

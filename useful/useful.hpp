@@ -259,7 +259,15 @@ namespace uf
     public:
         bool try_lock() { return !flag_.test_and_set(std::memory_order_acquire); }
 
-        void lock() { while (flag_.test_and_set(std::memory_order_acquire)) std::this_thread::yield(); }
+        template<typename Period = std::micro>
+        void lock(i64 interval = 0)
+        {
+            while (flag_.test_and_set(std::memory_order_acquire))
+                if (interval)
+                    this_thread::sleep_for(chrono::duration<i64, Period>(interval));
+                else
+                    this_thread::yield();
+        }
 
         void unlock() { flag_.clear(std::memory_order_release); }
     };
