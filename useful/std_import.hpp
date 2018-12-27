@@ -44,6 +44,8 @@ namespace uf
     using std::stringstream;
     using std::runtime_error;
 
+    using std::is_same;
+
     using std::enable_if_t;
     using std::void_t;
     using std::remove_const_t;

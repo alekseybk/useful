@@ -11,14 +11,35 @@ namespace uf
 {
     namespace meta
     {
+        template<template<typename> typename P, typename... Ts>
+        inline constexpr bool is_satisfies_one_v = (P<Ts>::value || ...);
+
+        template<template<typename> typename P, typename... Ts>
+        inline constexpr bool is_satisfies_all_v = (P<Ts>::value && ...);
+
+        template<template<typename, typename> typename P, typename F, typename... Ts>
+        inline constexpr bool is_satisfies_one_bin_f_v = (P<F, Ts>::value || ...);
+
+        template<template<typename, typename> typename P, typename F, typename... Ts>
+        inline constexpr bool is_satisfies_all_bin_f_v = (P<F, Ts>::value && ...);
+
+        template<template<typename, typename> typename P, typename S, typename... Ts>
+        inline constexpr bool is_satisfies_one_bin_s_v = (P<Ts, S>::value || ...);
+
+        template<template<typename, typename> typename P, typename S, typename... Ts>
+        inline constexpr bool is_satisfies_all_bin_s_v = (P<Ts, S>::value && ...);
+
+        template<typename Tp, typename... Ts>
+        inline constexpr bool is_one_of_v = is_satisfies_one_bin_f_v<is_same, Tp, Ts...>;
+
         template<typename Tp>
-        inline constexpr bool is_char_type_v;
+        inline constexpr bool is_char_type_v = is_one_of_v<Tp, char, wchar_t, char16_t, char32_t>;
 
         namespace detail
         {
             template<class Tp>
             struct is_string_type_helper : public conditional_t<is_pointer_v<Tp>,
-                                                      conditional_t<is_char_type_v<decay_t<remove_pointer_t<Tp>>>,
+                                                      conditional_t<is_char_type_v<remove_cv_t<remove_pointer_t<Tp>>>,
                                                           true_type,
                                                           false_type>,
                                                       false_type> { };
@@ -178,18 +199,6 @@ namespace uf
         }
         // end namespace detail
 
-        template<typename Tp, typename... Ts>
-        inline constexpr bool is_one_of_the_v = (is_same_v<Tp, Ts> || ...);
-
-        template<typename Tp, typename... Ts>
-        inline constexpr bool is_all_of_the_v = (is_same_v<Tp, Ts> && ...);
-
-        template<template<typename> typename P, typename... Ts>
-        inline constexpr bool is_one_of_the_p_v = (P<Ts>::value || ...);
-
-        template<template<typename> typename P, typename... Ts>
-        inline constexpr bool is_all_of_the_p_v = (P<Ts>::value && ...);
-
         template<typename Tp>
         struct is_tuple : public false_type { };
 
@@ -207,9 +216,6 @@ namespace uf
 
         template<typename Tp>
         inline constexpr bool is_pair_v = is_pair<Tp>::value;
-
-        template<typename Tp>
-        inline constexpr bool is_char_type_v = is_one_of_the_v<Tp, char, wchar_t, char16_t, char32_t>;
 
         template<class Tp>
         struct is_string_type
@@ -337,17 +343,6 @@ namespace uf
         template<typename... Ts>
         using last_t = tuple_element_t<sizeof...(Ts) - 1, tuple<Ts...>>;
 
-        template<typename... Ts>
-        struct is_same_all
-        {
-            using type = first_t<Ts...>;
-
-            static constexpr bool value = (is_same_v<Ts, type> && ...);
-        };
-
-        template<typename... Ts>
-        inline constexpr bool is_same_all_v = is_same_all<Ts...>::value;
-
         template<class Function>
         struct function_info;
 
@@ -376,5 +371,20 @@ namespace uf
 
         template<class Tp>
         inline constexpr bool has_begin_end_v = has_begin_end<Tp>::value;
+
+        template<typename... Ts>
+        struct is_same_all
+        {
+            static constexpr bool value = is_satisfies_all_bin_f_v<is_same, first_t<Ts...>, Ts...>;
+        };
+
+        template<>
+        struct is_same_all<>
+        {
+            static constexpr bool value = true;
+        };
+
+        template<typename... Ts>
+        inline constexpr bool is_same_all_v = is_same_all<Ts...>::value;
     }
 }

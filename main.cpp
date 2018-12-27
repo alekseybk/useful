@@ -22,47 +22,8 @@ using namespace std;
 using namespace uf::out_overloads;
 using namespace uf::in_overloads;
 
-
-
 int main()
 {
-    uf::spinlock sl;
-    int i = 0;
-
-    thread t2([&sl, &i]()
-    {
-        this_thread::sleep_for(chrono::milliseconds(1));
-        while (true)
-        {
-            sl.lock(500000);
-            if (i == 1000)
-            {
-                sl.unlock();
-                return;
-            }
-            cout << ++i << " t2" << endl;
-            sl.unlock();
-        }
-    });
-
-    thread t1([&sl, &i]()
-    {
-        this_thread::sleep_for(chrono::milliseconds(1));
-        while (true)
-        {
-            sl.lock<std::deci>(1);
-            if (i == 1000)
-            {
-                sl.unlock();
-                return;
-            }
-            cout << ++i << " t1" << endl;
-            sl.unlock();
-        }
-    });
-
-    t1.join();
-    t2.join();
-
+    cout << uf::meta::is_string_type_v<const volatile char32_t* const volatile&> << endl;
     return 0;
 }
