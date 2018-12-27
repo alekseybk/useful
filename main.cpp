@@ -22,8 +22,12 @@ using namespace std;
 using namespace uf::out_overloads;
 using namespace uf::in_overloads;
 
+using namespace uf::short_int;
+using namespace uf::short_int::literals;
+
 int main()
 {
-    cout << uf::meta::is_string_type_v<const volatile char32_t* const volatile&> << endl;
+    void* x = 0x1_ptr;
+    i32* a = 0x2_i32p;
     return 0;
 }

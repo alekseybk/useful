@@ -10,7 +10,7 @@
 #include "out_overloads.hpp"
 
 namespace uf
-{
+{   
     template<class Element, class P, class... Ps>
     bool satisfies_one(const Element& e, const P& p, const Ps&... ps);
 
