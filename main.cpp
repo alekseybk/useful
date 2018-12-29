@@ -10,9 +10,10 @@
 #include <thread>
 #include <mutex>
 
-#include "useful/useful.hpp"
+
 #include "useful/out_overloads.hpp"
 #include "useful/in_overloads.hpp"
+#include "useful/useful.hpp"
 
 #define check_types_equal(t1, t2) static_assert(std::is_same_v<t1, t2>)
 #define check_expr_type(expression, type) static_assert(std::is_same_v<decltype(expression), type>)
@@ -27,6 +28,17 @@ using namespace uf::short_int::literals;
 
 int main()
 {
-    cout << uf::split<2>("1234"s, '3') << endl;
+    uf::time_meter tm;
+    for (int i = 0; i < 100000000; ++i)
+    {
+
+    }
+    tm.stop();
+    for (int i = 0; i < 100000000; ++i)
+    {
+
+    }
+    cout << tm.get() << endl;
+    cout << 0.1233444434 << endl;
     return 0;
 }

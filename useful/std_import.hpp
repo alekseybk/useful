@@ -17,6 +17,7 @@
 #include <thread>
 #include <sstream>
 #include <chrono>
+#include <iomanip>
 
 #include "short_int.hpp"
 

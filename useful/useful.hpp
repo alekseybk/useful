@@ -6,8 +6,6 @@
 
 #pragma once
 #include "utils.hpp"
-#include "in_overloads.hpp"
-#include "out_overloads.hpp"
 
 namespace uf
 {   
@@ -275,6 +273,45 @@ namespace uf
         }
 
         void unlock() { flag_.clear(std::memory_order_release); }
+    };
+
+    class time_meter
+    {
+        chrono::high_resolution_clock::time_point begin_ = chrono::high_resolution_clock::now();
+        chrono::high_resolution_clock::time_point stop_ = begin_;
+        bool stopped_ = false;
+
+    public:
+        long double get() const noexcept
+        {
+            if (stopped_)
+                return static_cast<long double>((stop_ - begin_).count()) / std::nano::den;
+            return static_cast<long double>((chrono::high_resolution_clock::now() - begin_).count()) / std::nano::den;
+        }
+
+        void reset() noexcept
+        {
+            stopped_ = false;
+            begin_ = chrono::high_resolution_clock::now();
+        }
+
+        void stop() noexcept
+        {
+            if (stopped_)
+                return;
+            stop_ = chrono::high_resolution_clock::now();
+            stopped_ = true;
+        }
+
+        void start() noexcept
+        {
+            if (!stopped_)
+                return;
+            stopped_ = false;
+            begin_ += chrono::high_resolution_clock::now() - stop_;
+        }
+
+        bool stopped() const noexcept { return stopped_; }
     };
 
     template<class Tp, template<class> class Compare>
