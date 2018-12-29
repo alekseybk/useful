@@ -18,26 +18,20 @@ namespace uf
             {
                 (stream >> ... >> std::get<Ns>(t));
             }
-
-            template<class Stream, typename... Ts>
-            void read(Stream& stream, tuple<Ts...>& t)
-            {
-                tuple_read_helper(stream, t, make_index_sequence<sizeof...(Ts)>());
-            }
-
-            template<class Stream, typename F, typename S>
-            void read(Stream& stream, pair<F, S>& t)
-            {
-                stream >> t.first >> t.second;
-            }
         }
         // end namespace detail
 
-        template<typename Object, typename... StreamArgs>
-        std::basic_istream<StreamArgs...>& operator>>(std::basic_istream<StreamArgs...>& stream, Object& object)
+        template<typename... StreamArgs, typename... Ts>
+        std::basic_istream<StreamArgs...>& operator>>(std::basic_istream<StreamArgs...>& stream, tuple<Ts...>& t)
         {
-            detail::read(stream, object);
+            detail::tuple_read_helper(stream, t, make_index_sequence<sizeof...(Ts)>());
             return stream;
+        }
+
+        template<typename... StreamArgs, typename F, typename S>
+        std::basic_istream<StreamArgs...>& operator>>(std::basic_istream<StreamArgs...>& stream, pair<F, S>& p)
+        {
+            return stream >> p.first >> p.second;
         }
     }
     // end namespace in_overloads

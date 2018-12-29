@@ -13,48 +13,46 @@ namespace uf
     {
         namespace detail
         {
-            template<class Stream, typename Tp, meta::disable_if_t<meta::has_begin_end_v<Tp>, int> = 0>
-            void print(Stream& stream, const Tp& value) { stream << value; }
-
-            template<class Stream, class Container, enable_if_t<meta::has_begin_end_v<Container>, int> = 0>
-            void print(Stream& stream, const Container& container)
-            {
-                auto i = container.cbegin();
-                if (!container.empty())
-                    stream << *i++;
-                for (; i != container.cend(); ++i)
-                    stream << ", " << *i;
-            }
-
             template<typename Stream, typename... Ts, u64... Ns>
             void print_tuple_helper(Stream& stream, const tuple<Ts...>& t, std::index_sequence<Ns...>)
             {
-                ((stream << ", " << std::get<Ns>(t)), ...);
-            }
-
-            template<class Stream, typename... Ts>
-            void print(Stream& stream, const tuple<Ts...>& t)
-            {
-                if constexpr (sizeof...(Ts))
-                {
-                    stream << std::get<0>(t);
-                    print_tuple_helper(stream, t, meta::make_custom_index_sequence<1, sizeof...(Ts)>());
-                }
-            }
-
-            template<typename Stream, typename F, typename S>
-            void print(Stream& stream, const pair<F, S>& p)
-            {
-                stream << p.first << ", " << p.second;
+                ((stream << std::get<Ns>(t) << " "), ...);
             }
         }
         // end namespace detail
 
-        template<typename Object, typename... StreamArgs>
-        std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const Object& object)
+        template<typename... StreamArgs, class Container, enable_if_t<meta::has_begin_end_v<Container>, int> = 0>
+        std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const Container& c)
         {
-            detail::print(stream, object);
-            return stream;
+            stream << "[ ";
+            if (c.empty())
+            {
+                stream << "]";
+                return stream;
+            }
+            auto i = c.begin();
+            stream << *i++;
+            for (; i != c.end(); ++i)
+                stream << " " << *i;
+            return stream << " ]";
+        }
+
+        template<typename... StreamArgs, typename... Ts>
+        std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const tuple<Ts...>& t)
+        {
+            stream << "( ";
+            if constexpr (sizeof...(Ts))
+            {
+                stream << std::get<0>(t) << " ";
+                detail::print_tuple_helper(stream, t, meta::make_custom_index_sequence<1, sizeof...(Ts)>());
+            }
+            return stream << ")";
+        }
+
+        template<typename... StreamArgs, class F, class S>
+        std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const pair<F, S>& p)
+        {
+            return stream << "( " << p.first << " " << p.second << " )";
         }
     }
     // end namespace out_overloads

@@ -37,17 +37,17 @@ namespace uf
             inline constexpr u64 operator"" _u64(unsigned long long int value) noexcept { return value; }
             inline constexpr i64 operator"" _i64(unsigned long long int value) noexcept { return value; }
 
-            inline u8* operator"" _u8p(unsigned long long int value) noexcept { return reinterpret_cast<u8*>(value); }
-            inline i8* operator"" _i8p(unsigned long long int value) noexcept { return reinterpret_cast<i8*>(value); }
+            inline u8* operator"" _u8ptr(unsigned long long int value) noexcept { return reinterpret_cast<u8*>(value); }
+            inline i8* operator"" _i8ptr(unsigned long long int value) noexcept { return reinterpret_cast<i8*>(value); }
 
-            inline u16* operator"" _u16p(unsigned long long int value) noexcept { return reinterpret_cast<u16*>(value); }
-            inline i16* operator"" _i16p(unsigned long long int value) noexcept { return reinterpret_cast<i16*>(value); }
+            inline u16* operator"" _u16ptr(unsigned long long int value) noexcept { return reinterpret_cast<u16*>(value); }
+            inline i16* operator"" _i16ptr(unsigned long long int value) noexcept { return reinterpret_cast<i16*>(value); }
 
-            inline u32* operator"" _u32p(unsigned long long int value) noexcept { return reinterpret_cast<u32*>(value); }
-            inline i32* operator"" _i32p(unsigned long long int value) noexcept { return reinterpret_cast<i32*>(value); }
+            inline u32* operator"" _u32ptr(unsigned long long int value) noexcept { return reinterpret_cast<u32*>(value); }
+            inline i32* operator"" _i32ptr(unsigned long long int value) noexcept { return reinterpret_cast<i32*>(value); }
 
-            inline u64* operator"" _u64p(unsigned long long int value) noexcept { return reinterpret_cast<u64*>(value); }
-            inline i64* operator"" _i64p(unsigned long long int value) noexcept { return reinterpret_cast<i64*>(value); }
+            inline u64* operator"" _u64ptr(unsigned long long int value) noexcept { return reinterpret_cast<u64*>(value); }
+            inline i64* operator"" _i64ptr(unsigned long long int value) noexcept { return reinterpret_cast<i64*>(value); }
 
             inline void* operator"" _ptr(unsigned long long int value) noexcept { return reinterpret_cast<void*>(value); }
         }

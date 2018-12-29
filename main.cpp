@@ -27,7 +27,6 @@ using namespace uf::short_int::literals;
 
 int main()
 {
-    void* x = 0x1_ptr;
-    i32* a = 0x2_i32p;
+    cout << uf::split<2>("1234"s, '3') << endl;
     return 0;
 }

@@ -106,21 +106,20 @@ namespace uf
     bool satisfies_all(const Element& e, const Ps&... ps) { return (satisfies_one(e, ps) && ...); }
 
     template<class Container, class... Ds>
-    auto split(const Container& c, const Ds&... ds)
+    auto get_split_bounds(const Container& c, const Ds&... ds)
     {
-        using container_t = remove_reference_t<Container>;
-        using const_iterator_t = typename container_t::const_iterator;
+        using const_iterator_t = typename Container::const_iterator;
 
         bool empty_seq = true;
         vector<pair<const_iterator_t, const_iterator_t>> bounds;
-        for (auto i = c.cbegin(); i != c.cend(); ++i)
+        for (auto i = c.begin(); i != c.end(); ++i)
         {
             if (empty_seq)
             {
                 if (satisfies_one(*i, ds...))
                     continue;
                 empty_seq = false;
-                bounds.push_back({i, c.cend()});
+                bounds.push_back({i, c.end()});
                 continue;
             }
             if (satisfies_one(*i, ds...))
@@ -129,7 +128,13 @@ namespace uf
                 empty_seq = true;
             }
         }
-        return detail::create_split_vector<container_t>(std::move(bounds));
+        return bounds;
+    }
+
+    template<class Container, class... Ds>
+    auto split(const Container& c, const Ds&... ds)
+    {
+        return detail::create_split_vector<Container>(get_split_bounds(c, ds...));
     }
 
     /// return N-sized tuple instead of vector
@@ -153,11 +158,11 @@ namespace uf
     template<class Container, typename... Ps>
     Container strip_sides(const Container& c, const Ps&... ps)
     {
-        auto fwd = c.cbegin();
-        while (fwd != c.cend() && satisfies_one(*fwd, ps...))
+        auto fwd = c.begin();
+        while (fwd != c.end() && satisfies_one(*fwd, ps...))
             ++fwd;
-        auto bck = c.crbegin();
-        while (bck != c.crend() && satisfies_one(*bck, ps...))
+        auto bck = c.rbegin();
+        while (bck != c.rend() && satisfies_one(*bck, ps...))
             ++bck;
         return Container(fwd, bck.base());
     }
@@ -235,12 +240,12 @@ namespace uf
     template<class Container, class Compare>
     auto sort_save_position(Container&& container, const Compare& comp)
     {
-        auto transformed = position_pairs(std::forward<Container>(container));
-        sort(transformed.begin(), transformed.end(), [&comp](const auto& a, const auto& b)
+        auto pairs = position_pairs(std::forward<Container>(container));
+        sort(pairs.begin(), pairs.end(), [&comp](const auto& a, const auto& b)
         {
             return comp(a.second, b.second);
         });
-        return transformed;
+        return pairs;
     }
 
     template<class AssociativeContainer, class... Rs>

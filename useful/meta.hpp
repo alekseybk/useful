@@ -379,10 +379,7 @@ namespace uf
         };
 
         template<>
-        struct is_same_all<>
-        {
-            static constexpr bool value = true;
-        };
+        struct is_same_all<> : public true_type { };
 
         template<typename... Ts>
         inline constexpr bool is_same_all_v = is_same_all<Ts...>::value;
