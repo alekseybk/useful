@@ -58,6 +58,8 @@ namespace uf
         template<typename... StreamArgs, class Tp>
         std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const vector<vector<Tp>>& m)
         {
+            if (m.empty())
+                return stream;
             stream << m[0];
             for (size_t i = 1; i < m.size(); ++i)
                 stream << "\n" << m[i];
