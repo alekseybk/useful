@@ -278,7 +278,7 @@ namespace uf
     class time_meter
     {
         chrono::high_resolution_clock::time_point begin_ = chrono::high_resolution_clock::now();
-        chrono::high_resolution_clock::time_point stop_ = begin_;
+        chrono::high_resolution_clock::time_point stop_;
         bool stopped_ = false;
 
     public:
@@ -289,10 +289,12 @@ namespace uf
             return static_cast<long double>((chrono::high_resolution_clock::now() - begin_).count()) / std::nano::den;
         }
 
-        void reset() noexcept
+        long double restart() noexcept
         {
+            long double result = get();
             stopped_ = false;
             begin_ = chrono::high_resolution_clock::now();
+            return result;
         }
 
         void stop() noexcept

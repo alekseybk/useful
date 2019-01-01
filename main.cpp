@@ -28,17 +28,6 @@ using namespace uf::short_int::literals;
 
 int main()
 {
-    uf::time_meter tm;
-    for (int i = 0; i < 100000000; ++i)
-    {
-
-    }
-    tm.stop();
-    for (int i = 0; i < 100000000; ++i)
-    {
-
-    }
-    cout << tm.get() << endl;
-    cout << 0.1233444434 << endl;
+    cout << vector<vector<int>>{{1, 2, 4, 5}, {3, 4}, {5, 6}} << endl;
     return 0;
 }
