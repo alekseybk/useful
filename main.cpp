@@ -28,6 +28,10 @@ using namespace uf::short_int::literals;
 
 int main()
 {
-    cout << vector<vector<int>>{{1, 2, 4, 5}, {3, 4}, {5, 6}} << endl;
+    vector<int> s{1, 2, 3, 4, 5, 6, 7, 8};
+    auto [a, b, c, d] = uf::split<4>(s, 3, 5, 7);
+    cout << a << endl;
+    cout << b << endl;
+    cout << c << ' ' << d << endl;
     return 0;
 }

@@ -14,30 +14,25 @@ namespace uf
 
     namespace detail
     {
-        template<class Container, class Bounds>
-        auto create_split_vector(Bounds&& bounds)
+        template<class Container, class Iters>
+        auto create_split_vector(Iters&& iters)
         {
             vector<Container> result;
-            result.reserve(bounds.size());
-            for (const auto& [b, e] : bounds)
+            result.reserve(iters.size());
+            for (const auto& [b, e] : iters)
                 result.emplace_back(b, e);
             return result;
         }
 
-        template<class SplitVector, u64... Indexes>
-        auto create_split_tuple(SplitVector&& vec, index_sequence<Indexes...>)
-        {
-            using elem_t = typename remove_reference_t<SplitVector>::value_type;
-            return meta::tuple_same_n_t<elem_t, sizeof...(Indexes)>{utils::forward_element<SplitVector>(vec[Indexes])...};
-        }
+        template<class Container, class Iters, u64... Indexes>
+        auto create_split_tuple(Iters&& iters, index_sequence<Indexes...>)
+        { return meta::tuple_same_n_t<Container, sizeof...(Indexes)>{ Container(iters[Indexes].first, iters[Indexes].second)... }; }
 
         template<bool Lowercase>
-        string ascii_lower_upper_case_helper(const string& s)
+        void ascii_lower_upper_case_helper(string& s)
         {
             constexpr u64 dist = 'a' - 'A';
-            string result;
-            result.reserve(s.size());
-            for (auto c : s)
+            for (auto& c : s)
             {
                 if constexpr (Lowercase)
                 {
@@ -49,9 +44,7 @@ namespace uf
                     if (c >= 'a' && c <= 'z')
                         c -= dist;
                 }
-                result.push_back(c);
             }
-            return result;
         }
 
         template<bool ByKey, class AssociativeContainer, class... Rs>
@@ -80,9 +73,9 @@ namespace uf
     }
     // end namespace detail
 
-    string ascii_lowercase(const string& s) { return detail::ascii_lower_upper_case_helper<true>(s); }
+    void ascii_lowercase(string& s) { detail::ascii_lower_upper_case_helper<true>(s); }
 
-    string ascii_uppercase(const string& s) { return detail::ascii_lower_upper_case_helper<false>(s); }
+    void ascii_uppercase(string& s) { detail::ascii_lower_upper_case_helper<false>(s); }
 
     template<class Element, class P, class... Ps>
     bool satisfies_one(const Element& e, const P& p, const Ps&... ps)
@@ -104,7 +97,7 @@ namespace uf
     bool satisfies_all(const Element& e, const Ps&... ps) { return (satisfies_one(e, ps) && ...); }
 
     template<class Container, class... Ds>
-    auto get_split_bounds(const Container& c, const Ds&... ds)
+    auto split_iters(const Container& c, const Ds&... ds)
     {
         using const_iterator_t = typename Container::const_iterator;
 
@@ -131,38 +124,41 @@ namespace uf
 
     template<class Container, class... Ds>
     auto split(const Container& c, const Ds&... ds)
-    {
-        return detail::create_split_vector<Container>(get_split_bounds(c, ds...));
-    }
+    { return detail::create_split_vector<Container>(split_iters(c, ds...)); }
 
-    /// return N-sized tuple instead of vector
     template<u64 N, class Container, class... Ds>
     auto split(const Container& c, const Ds&... ds)
-    {
-        auto temp = split(c, ds...);
-        return detail::create_split_tuple(std::move(temp), make_index_sequence<N>());
-    }
+    { return detail::create_split_tuple<Container>(split_iters(c, ds...), make_index_sequence<N>()); }
 
     template<class Container, typename... Ps>
-    Container strip(const Container& c, const Ps&... ps)
-    {
-        Container result;
-        for (const auto& e : c)
-            if (!satisfies_one(e, ps...))
-                result.insert(result.end(), e);
-        return result;
-    }
-
-    template<class Container, typename... Ps>
-    Container strip_sides(const Container& c, const Ps&... ps)
+    void lstrip(Container& c, const Ps&... ps)
     {
         auto fwd = c.begin();
         while (fwd != c.end() && satisfies_one(*fwd, ps...))
             ++fwd;
+        c.erase(c.begin(), fwd);
+    }
+
+    template<class Container, typename... Ps>
+    void rstrip(Container& c, const Ps&... ps)
+    {
         auto bck = c.rbegin();
         while (bck != c.rend() && satisfies_one(*bck, ps...))
             ++bck;
-        return Container(fwd, bck.base());
+        c.erase(bck.base(), c.end());
+    }
+
+    template<class Container, typename... Ps>
+    void strip(Container& c, const Ps&... ps) { lstrip(c, ps...); rstrip(c, ps...); }
+
+    template<class Container, typename... Ps>
+    void remove(Container& c, const Ps&... ps)
+    {
+        auto move_to = c.begin();
+        for (auto& e : c)
+            if (!satisfies_one(e, ps...))
+                *move_to++ = std::move(e);
+        c.erase(move_to, c.end());
     }
 
     template<class Stream>
@@ -297,12 +293,14 @@ namespace uf
             return result;
         }
 
-        void stop() noexcept
+        long double stop() noexcept
         {
+            long double result = get();
             if (stopped_)
-                return;
+                return result;
             stop_ = chrono::high_resolution_clock::now();
             stopped_ = true;
+            return result;
         }
 
         void start() noexcept
