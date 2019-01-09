@@ -287,49 +287,6 @@ namespace uf
         void unlock() { flag_.clear(std::memory_order_release); }
     };
 
-    class time_meter
-    {
-        chrono::high_resolution_clock::time_point begin_ = chrono::high_resolution_clock::now();
-        chrono::high_resolution_clock::time_point stop_;
-        bool stopped_ = false;
-
-    public:
-        long double get() const noexcept
-        {
-            if (stopped_)
-                return static_cast<long double>((stop_ - begin_).count()) / std::nano::den;
-            return static_cast<long double>((chrono::high_resolution_clock::now() - begin_).count()) / std::nano::den;
-        }
-
-        long double restart() noexcept
-        {
-            long double result = get();
-            stopped_ = false;
-            begin_ = chrono::high_resolution_clock::now();
-            return result;
-        }
-
-        long double stop() noexcept
-        {
-            long double result = get();
-            if (stopped_)
-                return result;
-            stop_ = chrono::high_resolution_clock::now();
-            stopped_ = true;
-            return result;
-        }
-
-        void start() noexcept
-        {
-            if (!stopped_)
-                return;
-            stopped_ = false;
-            begin_ += chrono::high_resolution_clock::now() - stop_;
-        }
-
-        bool stopped() const noexcept { return stopped_; }
-    };
-
     template<class Tp, template<class> class Compare>
     class dereference_compare
     {
