@@ -26,7 +26,9 @@ namespace uf
 
         template<class Container, class Iters, u64... Indexes>
         auto create_split_tuple(Iters&& iters, index_sequence<Indexes...>)
-        { return meta::tuple_same_n_t<Container, sizeof...(Indexes)>{ Container(iters[Indexes].first, iters[Indexes].second)... }; }
+        {
+            return meta::tuple_same_n_t<Container, sizeof...(Indexes)>{ Container(iters[Indexes].first, iters[Indexes].second)... };
+        }
 
         template<bool Lowercase>
         void ascii_lower_upper_case_helper(string& s)
@@ -94,7 +96,10 @@ namespace uf
     }
 
     template<class Element, class P, class... Ps>
-    bool satisfies_all(const Element& e, const Ps&... ps) { return (satisfies_one(e, ps) && ...); }
+    bool satisfies_all(const Element& e, const Ps&... ps)
+    {
+        return (satisfies_one(e, ps) && ...);
+    }
 
     template<class Container, class... Ds>
     auto split_iters(const Container& c, const Ds&... ds)
@@ -124,11 +129,15 @@ namespace uf
 
     template<class Container, class... Ds>
     auto split(const Container& c, const Ds&... ds)
-    { return detail::create_split_vector<Container>(split_iters(c, ds...)); }
+    {
+        return detail::create_split_vector<Container>(split_iters(c, ds...));
+    }
 
     template<u64 N, class Container, class... Ds>
     auto split(const Container& c, const Ds&... ds)
-    { return detail::create_split_tuple<Container>(split_iters(c, ds...), make_index_sequence<N>()); }
+    {
+        return detail::create_split_tuple<Container>(split_iters(c, ds...), make_index_sequence<N>());
+    }
 
     template<class Container, typename... Ps>
     void lstrip(Container& c, const Ps&... ps)
@@ -149,7 +158,11 @@ namespace uf
     }
 
     template<class Container, typename... Ps>
-    void strip(Container& c, const Ps&... ps) { lstrip(c, ps...); rstrip(c, ps...); }
+    void strip(Container& c, const Ps&... ps)
+    {
+        lstrip(c, ps...);
+        rstrip(c, ps...);
+    }
 
     template<class Container, typename... Ps>
     void remove(Container& c, const Ps&... ps)
@@ -244,12 +257,15 @@ namespace uf
 
     template<class AssociativeContainer, class... Rs>
     void remove_associative_by_key(AssociativeContainer& c, const Rs&... rms)
-    { detail::remove_associative_helper<true>(c, rms...); }
-
+    {
+        detail::remove_associative_helper<true>(c, rms...);
+    }
 
     template<class AssociativeContainer, class... Rs>
     void remove_associative_by_value(AssociativeContainer& c, const Rs&... rms)
-    { detail::remove_associative_helper<false>(c, rms...); }
+    {
+        detail::remove_associative_helper<false>(c, rms...);
+    }
 
     class spinlock
     {
@@ -322,9 +338,7 @@ namespace uf
     public:
         template<class Pointer>
         bool operator()(const Pointer& a, const Pointer& b) const
-        {
-            return comp_(*a, *b);
-        }
+        { return comp_(*a, *b); }
     };
 }
 // end namespace uf

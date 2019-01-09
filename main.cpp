@@ -14,6 +14,7 @@
 #include "useful/out_overloads.hpp"
 #include "useful/in_overloads.hpp"
 #include "useful/useful.hpp"
+#include "useful/proc_time.hpp"
 
 #define check_types_equal(t1, t2) static_assert(std::is_same_v<t1, t2>)
 #define check_expr_type(expression, type) static_assert(std::is_same_v<decltype(expression), type>)
@@ -28,10 +29,10 @@ using namespace uf::short_int::literals;
 
 int main()
 {
-    vector<int> s{1, 2, 3, 4, 5, 6, 7, 8};
-    auto [a, b, c, d] = uf::split<4>(s, 3, 5, 7);
-    cout << a << endl;
-    cout << b << endl;
-    cout << c << ' ' << d << endl;
+    uf::time_meter tm2;
+    uf::proc_time_meter tm;
+    for (long i = 0; i < 10000000000; ++i) { }
+    cout << tm.get() << endl;
+    cout << tm2.get() << endl;
     return 0;
 }
