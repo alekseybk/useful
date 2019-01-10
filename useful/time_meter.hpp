@@ -1,3 +1,9 @@
+/*
+ * Copyright Aleksey Verkholat 2018
+ * Distributed under the Boost Software License, Version 1.0.
+ * See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt
+*/
+
 #pragma once
 #include "std_import.hpp"
 
@@ -40,12 +46,13 @@ namespace uf
             return get_sec_(begin_, get_now_());
         }
 
-        double restart() const
+        double restart()
         {
             const TimePoint now = get_now_();
+            double result = seconds(now);
             stopped_ = false;
             begin_ = now;
-            return seconds(now);
+            return result;
         }
 
         double stop()
@@ -70,7 +77,7 @@ namespace uf
             return stopped_;
         }
 
-    protected:
+    private:
         double seconds(TimePoint now) const
         {
             if (stopped_)
@@ -82,7 +89,6 @@ namespace uf
     class time_meter : public basic_time_meter<chrono::high_resolution_clock::time_point>
     {
         using time_point = chrono::high_resolution_clock::time_point;
-        using basic = basic_time_meter<time_point>;
 
         static double get_seconds(time_point p1, time_point p2)
         {
@@ -90,7 +96,7 @@ namespace uf
         }
 
     public:
-        time_meter() : basic(chrono::high_resolution_clock::now, get_seconds) { }
+        time_meter() : basic_time_meter<time_point>(chrono::high_resolution_clock::now, get_seconds) { }
     };
 
 #ifdef __linux__
@@ -98,12 +104,10 @@ namespace uf
     class proc_time_meter : public basic_time_meter<i64>
     {
         using time_point = i64;
-        using basic = basic_time_meter<time_point>;
-
-        static const long per_second;
 
         static double get_seconds(time_point p1, time_point p2)
         {
+            static const auto per_second = sysconf(_SC_CLK_TCK);
             return static_cast<double>(p2 - p1) / per_second;
         }
 
@@ -115,10 +119,8 @@ namespace uf
         }
 
     public:
-        proc_time_meter() : basic(get_now, get_seconds) { }
+        proc_time_meter() : basic_time_meter<time_point>(get_now, get_seconds) { }
     };
-
-    const long proc_time_meter::per_second = sysconf(_SC_CLK_TCK);
 
 #elif _WIN32
 

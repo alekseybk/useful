@@ -14,7 +14,7 @@
 #include "useful/out_overloads.hpp"
 #include "useful/in_overloads.hpp"
 #include "useful/useful.hpp"
-#include "useful/proc_time.hpp"
+#include "useful/time_meter.hpp"
 
 #define check_types_equal(t1, t2) static_assert(std::is_same_v<t1, t2>)
 #define check_expr_type(expression, type) static_assert(std::is_same_v<decltype(expression), type>)
@@ -31,8 +31,8 @@ int main()
 {
     uf::time_meter tm2;
     uf::proc_time_meter tm;
-    for (long i = 0; i < 10000000000; ++i) { }
-    cout << tm.get() << endl;
-    cout << tm2.get() << endl;
+    for (long i = 0; i < 1000000000; ++i) { }
+    cout << tm.restart() << endl;
+    cout << tm2.seconds() << endl;
     return 0;
 }
