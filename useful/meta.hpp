@@ -91,8 +91,7 @@ namespace uf
             };
 
             template<typename TupleA, typename TupleB, typename... Types>
-            struct tuple_concat_two_helper<TupleA, integral_constant<u64, tuple_size_v<TupleA>>, TupleB,
-                                           integral_constant<u64, tuple_size_v<TupleB>>, Types...>
+            struct tuple_concat_two_helper<TupleA, integral_constant<u64, tuple_size_v<TupleA>>, TupleB, integral_constant<u64, tuple_size_v<TupleB>>, Types...>
             {
                 using type = tuple<Types...>;
             };

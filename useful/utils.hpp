@@ -89,27 +89,40 @@ namespace uf
 
         template<typename Result, typename... Ts>
         constexpr auto min(Ts&&... args)
-        { return detail::min_max_1<true, Result>(std::forward<Ts>(args)...); }
+        {
+            return detail::min_max_1<true, Result>(std::forward<Ts>(args)...);
+        }
 
         template<typename... Ts>
         constexpr auto min(Ts&&... args)
-        { return detail::min_max_1<true, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...); }
+        {
+            return detail::min_max_1<true, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+        }
 
         template<typename... Ts>
         constexpr auto& min_ref(Ts&&... args)
-        { return detail::min_max_ref_1<true, Ts...>(std::forward<Ts>(args)...); }
+        {
+            return detail::min_max_ref_1<true, Ts...>(std::forward<Ts>(args)...);
+        }
 
         template<typename Result, typename... Ts>
         constexpr auto max(Ts&&... args)
-        { return detail::min_max_1<false, Result>(std::forward<Ts>(args)...); }
+        {
+            return detail::min_max_1<false, Result>(std::forward<Ts>(args)...);
+        }
 
         template<typename... Ts>
         constexpr auto max(Ts&&... args)
-        { return detail::min_max_1<false, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...); }
+        {
+            return detail::min_max_1<false, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+        }
 
         template<typename... Ts>
         constexpr auto& max_ref(Ts&&... args)
-        { return detail::min_max_ref_1<false, Ts...>(std::forward<Ts>(args)...); }
+        {
+            return detail::min_max_ref_1<false, Ts...>(std::forward<Ts>(args)...);
+        }
     }
     // end namespace utils
 }
+// end namespace uf

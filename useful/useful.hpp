@@ -75,9 +75,15 @@ namespace uf
     }
     // end namespace detail
 
-    void ascii_lowercase(string& s) { detail::ascii_lower_upper_case_helper<true>(s); }
+    void ascii_lowercase(string& s)
+    {
+        detail::ascii_lower_upper_case_helper<true>(s);
+    }
 
-    void ascii_uppercase(string& s) { detail::ascii_lower_upper_case_helper<false>(s); }
+    void ascii_uppercase(string& s)
+    {
+        detail::ascii_lower_upper_case_helper<false>(s);
+    }
 
     template<class Element, class P, class... Ps>
     bool satisfies_one(const Element& e, const P& p, const Ps&... ps)
@@ -174,6 +180,7 @@ namespace uf
         c.erase(move_to, c.end());
     }
 
+    // TODO: remove or create separated csv module
     template<class Stream>
     vector<vector<string>> read_csv(Stream&& stream, char delimiter = ',') noexcept(false)
     {
@@ -272,19 +279,27 @@ namespace uf
         atomic_flag flag_ = ATOMIC_FLAG_INIT;
 
     public:
-        bool try_lock() { return !flag_.test_and_set(std::memory_order_acquire); }
+        bool try_lock()
+        {
+            return !flag_.test_and_set(std::memory_order_acquire);
+        }
 
         template<typename Period = std::micro>
         void lock(i64 interval = 0)
         {
             while (flag_.test_and_set(std::memory_order_acquire))
+            {
                 if (interval)
                     this_thread::sleep_for(chrono::duration<i64, Period>(interval));
                 else
                     this_thread::yield();
+            }
         }
 
-        void unlock() { flag_.clear(std::memory_order_release); }
+        void unlock()
+        {
+            flag_.clear(std::memory_order_release);
+        }
     };
 
     template<class Tp, template<class> class Compare>
@@ -295,7 +310,9 @@ namespace uf
     public:
         template<class Pointer>
         bool operator()(const Pointer& a, const Pointer& b) const
-        { return comp_(*a, *b); }
+        {
+            return comp_(*a, *b);
+        }
     };
 }
 // end namespace uf

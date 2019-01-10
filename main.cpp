@@ -6,14 +6,13 @@
 
 #include <iostream>
 #include <fstream>
-#include <set>
-#include <thread>
-#include <mutex>
 
-
+#include "useful/short_int.hpp"
+#include "useful/meta.hpp"
+#include "useful/useful.hpp"
+#include "useful/utils.hpp"
 #include "useful/out_overloads.hpp"
 #include "useful/in_overloads.hpp"
-#include "useful/useful.hpp"
 #include "useful/time_meter.hpp"
 
 #define check_types_equal(t1, t2) static_assert(std::is_same_v<t1, t2>)
@@ -23,14 +22,13 @@ using namespace std;
 
 using namespace uf::out_overloads;
 using namespace uf::in_overloads;
-
 using namespace uf::short_int;
 using namespace uf::short_int::literals;
 
 int main()
 {
-    uf::time_meter tm2;
     uf::proc_time_meter tm;
+    uf::time_meter tm2;
     for (long i = 0; i < 1000000000; ++i) { }
     cout << tm.restart() << endl;
     cout << tm2.seconds() << endl;
