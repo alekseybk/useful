@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <list>
 
 #include "useful/short_int.hpp"
 #include "useful/meta.hpp"
@@ -27,10 +28,6 @@ using namespace uf::short_int::literals;
 
 int main()
 {
-    uf::proc_time_meter tm;
-    uf::time_meter tm2;
-    for (long i = 0; i < 1000000000; ++i) { }
-    cout << tm.restart() << endl;
-    cout << tm2.seconds() << endl;
+    cout << uf::meta::iterable_level_v<map<int, int>> << endl;
     return 0;
 }

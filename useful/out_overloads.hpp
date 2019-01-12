@@ -21,31 +21,20 @@ namespace uf
         }
         // end namespace detail
 
-        template<typename... StreamArgs, class Container, enable_if_t<meta::has_begin_end_v<Container>, int> = 0>
+        template<typename... StreamArgs, class Container, enable_if_t<meta::is_iterable_v<Container>, int> = 0>
         std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const Container& c)
         {
             stream << "[ ";
-            if (c.empty())
-            {
-                stream << "]";
-                return stream;
-            }
-            auto i = c.begin();
-            stream << *i++;
-            for (; i != c.end(); ++i)
-                stream << " " << *i;
-            return stream << " ]";
+            for (const auto& e : c)
+                stream << e << " ";
+            return stream << "]";
         }
 
         template<typename... StreamArgs, typename... Ts>
         std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const tuple<Ts...>& t)
         {
             stream << "( ";
-            if constexpr (sizeof...(Ts))
-            {
-                stream << std::get<0>(t) << " ";
-                detail::print_tuple_helper(stream, t, meta::make_custom_index_sequence<1, sizeof...(Ts)>());
-            }
+            detail::print_tuple_helper(stream, t, make_index_sequence<sizeof...(Ts)>());
             return stream << ")";
         }
 

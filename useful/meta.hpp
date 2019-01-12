@@ -363,13 +363,28 @@ namespace uf
         using disable_if_t = enable_if_t<!X, Tp>;
 
         template<class Tp, typename = void>
-        struct has_begin_end : public false_type { };
+        struct is_iterable : public false_type { };
 
         template<class Tp>
-        struct has_begin_end<Tp, void_t<decltype(declval<Tp>().begin()), decltype(declval<Tp>().end())>> : public true_type { };
+        struct is_iterable<Tp, void_t<decltype(declval<Tp>().begin()), decltype(declval<Tp>().end())>> : public true_type { };
 
         template<class Tp>
-        inline constexpr bool has_begin_end_v = has_begin_end<Tp>::value;
+        inline constexpr bool is_iterable_v = is_iterable<Tp>::value;
+
+        template<class Tp, typename = void>
+        struct iterable_level
+        {
+            static constexpr u64 value = 0;
+        };
+
+        template<class Tp>
+        struct iterable_level<Tp, enable_if_t<is_iterable_v<Tp>>>
+        {
+            static constexpr u64 value = 1 + iterable_level<typename Tp::value_type>::value;
+        };
+
+        template<typename Container>
+        inline constexpr u64 iterable_level_v = iterable_level<Container>::value;
 
         template<typename... Ts>
         struct is_same_all

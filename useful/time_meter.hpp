@@ -88,23 +88,28 @@ namespace uf
 
     class time_meter : public basic_time_meter<chrono::high_resolution_clock::time_point>
     {
+    public:
         using time_point = chrono::high_resolution_clock::time_point;
 
+        time_meter() : basic_time_meter<time_point>(chrono::high_resolution_clock::now, get_seconds) { }
+
+    private:
         static double get_seconds(time_point p1, time_point p2)
         {
             return static_cast<double>((p2 - p1).count()) / chrono::high_resolution_clock::period::den;
         }
-
-    public:
-        time_meter() : basic_time_meter<time_point>(chrono::high_resolution_clock::now, get_seconds) { }
     };
 
 #ifdef __linux__
 
     class proc_time_meter : public basic_time_meter<i64>
     {
+    public:
         using time_point = i64;
 
+        proc_time_meter() : basic_time_meter<time_point>(get_now, get_seconds) { }
+
+    private:
         static double get_seconds(time_point p1, time_point p2)
         {
             static const auto per_second = sysconf(_SC_CLK_TCK);
@@ -117,9 +122,6 @@ namespace uf
             times(&result);
             return result.tms_stime + result.tms_utime;
         }
-
-    public:
-        proc_time_meter() : basic_time_meter<time_point>(get_now, get_seconds) { }
     };
 
 #elif _WIN32
