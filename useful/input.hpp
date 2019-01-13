@@ -5,11 +5,11 @@
 */
 
 #pragma once
-#include "std_import.hpp"
+#include "import.hpp"
 
 namespace uf
 {
-    namespace in_overloads
+    namespace input
     {
         namespace detail
         {
@@ -34,6 +34,6 @@ namespace uf
             return stream >> p.first >> p.second;
         }
     }
-    // end namespace in_overloads
+    // end namespace input
 }
 // end namespace uf

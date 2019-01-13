@@ -7,6 +7,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <list>
 #include <map>
 #include <unordered_map>
 #include <tuple>
@@ -18,12 +19,12 @@
 #include <chrono>
 #include <iomanip>
 
-#include "short_int.hpp"
+#include "basic_types.hpp"
 
 namespace uf
 {
-    using namespace short_int;
-    using namespace short_int::literals;
+    using namespace basic_types;
+    using namespace basic_types::literals;
 
     using namespace std::literals;
     using namespace std::chrono_literals;

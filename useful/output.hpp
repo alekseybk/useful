@@ -9,7 +9,7 @@
 
 namespace uf
 {
-    namespace out_overloads
+    namespace output
     {
         namespace detail
         {
@@ -21,8 +21,8 @@ namespace uf
         }
         // end namespace detail
 
-        template<typename... StreamArgs, class Container, enable_if_t<meta::is_iterable_v<Container>, int> = 0>
-        std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const Container& c)
+        template<typename... StreamArgs, class Iterable, enable_if_t<meta::is_iterable_v<Iterable>, int> = 0>
+        std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const Iterable& c)
         {
             stream << "[ ";
             for (const auto& e : c)
@@ -43,18 +43,7 @@ namespace uf
         {
             return stream << "( " << p.first << " " << p.second << " )";
         }
-
-        template<typename... StreamArgs, class Tp>
-        std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const vector<vector<Tp>>& m)
-        {
-            if (m.empty())
-                return stream;
-            stream << m[0];
-            for (size_t i = 1; i < m.size(); ++i)
-                stream << "\n" << m[i];
-            return stream;
-        }
     }
-    // end namespace out_overloads
+    // end namespace output
 }
 // end namespace uf

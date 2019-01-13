@@ -9,7 +9,7 @@
 
 namespace uf
 {
-    namespace short_int
+    namespace basic_types
     {
         using u8 = std::uint8_t;
         using i8 = std::int8_t;
@@ -109,9 +109,24 @@ namespace uf
             {
                 return reinterpret_cast<i64*>(value);
             }
+
+            inline float* operator"" _fptr(unsigned long long int value) noexcept
+            {
+                return reinterpret_cast<float*>(value);
+            }
+
+            inline double* operator"" _dptr(unsigned long long int value) noexcept
+            {
+                return reinterpret_cast<double*>(value);
+            }
+
+            inline long double* operator"" _ldptr(unsigned long long int value) noexcept
+            {
+                return reinterpret_cast<long double*>(value);
+            }
         }
         // end namespace literals
     }
-    // end namespace short_int
+    // end namespace basic_types
 }
 // end namespace uf
