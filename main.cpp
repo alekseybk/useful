@@ -6,14 +6,13 @@
 
 #include <iostream>
 #include <fstream>
-#include <list>
 
-#include "useful/short_int.hpp"
+#include "useful/basic_types.hpp"
 #include "useful/meta.hpp"
 #include "useful/useful.hpp"
 #include "useful/utils.hpp"
-#include "useful/out_overloads.hpp"
-#include "useful/in_overloads.hpp"
+#include "useful/output.hpp"
+#include "useful/input.hpp"
 #include "useful/time_meter.hpp"
 
 #define check_types_equal(t1, t2) static_assert(std::is_same_v<t1, t2>)
@@ -21,13 +20,13 @@
 
 using namespace std;
 
-using namespace uf::out_overloads;
-using namespace uf::in_overloads;
-using namespace uf::short_int;
-using namespace uf::short_int::literals;
+using namespace uf::output;
+using namespace uf::input;
+using namespace uf::basic_types;
+using namespace uf::basic_types::literals;
 
 int main()
 {
-    cout << uf::meta::iterable_level_v<map<int, int>> << endl;
+    cout << 2.1F << endl;
     return 0;
 }
