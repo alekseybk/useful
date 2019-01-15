@@ -11,6 +11,9 @@ namespace uf
 {
     namespace utils
     {
+        template<typename Owner, typename E>
+        constexpr auto&& forward_element(E&& e);
+
         namespace detail
         {
             template<bool Minimum, typename Result, typename... Ts, meta::disable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
@@ -65,12 +68,12 @@ namespace uf
             }
 
             template<bool Result, typename Tuple, typename F, u64... Ns>
-            auto for_each_tpl_helper(Tuple&& t, F&& f, index_sequence<Ns...>)
+            auto tuple_for_each_helper(Tuple&& t, F&& f, index_sequence<Ns...>)
             {
                 if constexpr (Result)
-                    return tuple{f(std::get<Ns>(t))...};
+                    return tuple{f(forward_element<Tuple>(std::get<Ns>(t)))...};
                 else
-                    (f(std::get<Ns>(t)), ...);
+                    (f(forward_element<Tuple>(std::get<Ns>(t))), ...);
             }
         }
         // namespace detail
@@ -89,18 +92,18 @@ namespace uf
         }
 
         template<bool Result = false, typename Tuple, typename F>
-        auto for_each_tpl(Tuple&& t, F&& f)
+        auto tuple_for_each(Tuple&& t, F&& f)
         {
             using tuple_type = remove_reference_t<Tuple>;
 
             if constexpr (Result)
-                return detail::for_each_tpl_helper<Result>(t, f, make_index_sequence<tuple_size_v<tuple_type>>());
+                return detail::tuple_for_each_helper<Result>(std::forward<Tuple>(t), f, make_index_sequence<tuple_size_v<tuple_type>>());
             else
-                detail::for_each_tpl_helper<Result>(t, f, make_index_sequence<tuple_size_v<tuple_type>>());
+                detail::tuple_for_each_helper<Result>(std::forward<Tuple>(t), f, make_index_sequence<tuple_size_v<tuple_type>>());
         }
 
         template<typename TargetType, typename Tp, typename F>
-        void for_each_target(Tp&& container, const F& f)
+        void targeted_for_each(Tp&& container, const F& f)
         {
             using value_type = decay_t<typename remove_reference_t<Tp>::value_type>;
 
@@ -108,7 +111,7 @@ namespace uf
                 std::for_each(container.begin(), container.end(), f);
             else
                 for (auto& value : container)
-                    for_each_target<TargetType>(forward_element<Tp>(value), f);
+                    targeted_for_each<TargetType>(forward_element<Tp>(value), f);
         }
 
         template<typename Result, typename... Ts>

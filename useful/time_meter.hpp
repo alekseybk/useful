@@ -30,7 +30,7 @@ namespace uf
         const tuple<Meters...> tm;
         f(std::forward<Args>(args)...);
         if constexpr (sizeof...(Meters) > 1)
-            return utils::for_each_tpl<true>(tm, [](const auto& meter){ return meter.seconds(); });
+            return utils::tuple_for_each<true>(tm, [](const auto& meter){ return meter.seconds(); });
         else
             return std::get<0>(tm).seconds();
     }
