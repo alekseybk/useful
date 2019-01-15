@@ -19,7 +19,7 @@ namespace uf
                 ((stream << std::get<Ns>(t) << " "), ...);
             }
         }
-        // end namespace detail
+        // namespace detail
 
         template<typename... StreamArgs, class Iterable, enable_if_t<meta::is_iterable_v<Iterable>, int> = 0>
         std::basic_ostream<StreamArgs...>& operator<<(std::basic_ostream<StreamArgs...>& stream, const Iterable& c)
@@ -44,6 +44,6 @@ namespace uf
             return stream << "( " << p.first << " " << p.second << " )";
         }
     }
-    // end namespace output
+    // namespace output
 }
-// end namespace uf
+// namespace uf

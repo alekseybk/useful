@@ -19,7 +19,7 @@ namespace uf
                 (stream >> ... >> std::get<Ns>(t));
             }
         }
-        // end namespace detail
+        // namespace detail
 
         template<typename... StreamArgs, typename... Ts>
         std::basic_istream<StreamArgs...>& operator>>(std::basic_istream<StreamArgs...>& stream, tuple<Ts...>& t)
@@ -34,6 +34,6 @@ namespace uf
             return stream >> p.first >> p.second;
         }
     }
-    // end namespace input
+    // namespace input
 }
-// end namespace uf
+// namespace uf

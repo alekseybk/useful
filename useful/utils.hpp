@@ -13,54 +13,67 @@ namespace uf
     {
         namespace detail
         {
-            template<bool Minimum, typename Result, typename... Ts, enable_if_t<!meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
-            constexpr auto min_max_1(Ts&&... args)
+            template<bool Minimum, typename Result, typename... Ts, meta::disable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
+            constexpr auto mm_helper(Ts&&... args)
             {
                 static_assert(is_same_v<Result, decay_t<Result>>);
 
-                Result m;
-                m = *std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-                if constexpr (Minimum)
-                    ((m = (args < m) ? std::forward<Ts>(args) : std::move(m)), ...);
-                else
-                    ((m = (args > m) ? std::forward<Ts>(args) : std::move(m)), ...);
+                // TODO: find same types, call mm_ref_helper
+                Result m(*std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...}));
+                auto compare_function = [&m](auto&& another)
+                {
+                    if constexpr (Minimum)
+                    {
+                        if (another < m)
+                            m = std::forward(another);
+                    }
+                    else
+                    {
+                        if (another > m)
+                            m = std::forward(another);
+                    }
+                };
+                (compare_function(std::forward<Ts>(args)), ...);
                 return m;
             }
 
             template<bool Minimum, typename Result, typename... Ts, enable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
-            constexpr auto min_max_1(Ts&&... args)
+            constexpr auto mm_helper(Ts&&... args)
             {
                 static_assert(is_same_v<Result, decay_t<Result>>);
                 using type = decay_t<meta::first_t<Ts...>>;
-
                 const type* m = std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
                 if constexpr (Minimum)
                     ((m = (args < *m) ? &args : m), ...);
                 else
                     ((m = (args > *m) ? &args : m), ...);
-                if constexpr (is_same_v<Result, type>)
-                    return *m;
-                else
-                    return Result(*m);
+                return Result(*m);
             }
 
             template<bool Minimum, typename... Ts>
-            constexpr auto& min_max_ref_1(Ts&&... args)
+            constexpr auto& mm_ref_helper(Ts&&... args)
             {
                 static_assert((is_lvalue_reference_v<Ts> && ...) && meta::is_same_all_v<decay_t<Ts>...>, "All arguments must be an lvalues of the same type");
-                using type = conditional_t<(is_const_v<remove_reference_t<Ts>> || ...),
-                             const remove_reference_t<meta::first_t<Ts...>>,
-                             remove_reference_t<meta::first_t<Ts...>>>;
-
-                reference_wrapper<type> m = *std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
+                using type = remove_reference_t<meta::first_t<Ts...>>;
+                using result_type = conditional_t<(is_const_v<remove_reference_t<Ts>> || ...), const type, type>;
+                result_type* m = std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
                 if constexpr (Minimum)
-                    ((m = (args < m.get()) ? reference_wrapper<type>(args) : m), ...);
+                    ((m = (args < *m) ? &args : m), ...);
                 else
-                    ((m = (args > m.get()) ? reference_wrapper<type>(args) : m), ...);
-                return m.get();
+                    ((m = (args > *m) ? &args : m), ...);
+                return *m;
+            }
+
+            template<bool Result, typename Tuple, typename F, u64... Ns>
+            auto for_each_tpl_helper(Tuple&& t, F&& f, index_sequence<Ns...>)
+            {
+                if constexpr (Result)
+                    return tuple{f(std::get<Ns>(t))...};
+                else
+                    (f(std::get<Ns>(t)), ...);
             }
         }
-        // end namespace detail
+        // namespace detail
 
         template<typename Owner, typename E>
         constexpr auto&& forward_element(E&& e)
@@ -73,6 +86,17 @@ namespace uf
                 return static_cast<type&>(e);
             else
                 return static_cast<type&&>(e);
+        }
+
+        template<bool Result = false, typename Tuple, typename F>
+        auto for_each_tpl(Tuple&& t, F&& f)
+        {
+            using tuple_type = remove_reference_t<Tuple>;
+
+            if constexpr (Result)
+                return detail::for_each_tpl_helper<Result>(t, f, make_index_sequence<tuple_size_v<tuple_type>>());
+            else
+                detail::for_each_tpl_helper<Result>(t, f, make_index_sequence<tuple_size_v<tuple_type>>());
         }
 
         template<typename TargetType, typename Tp, typename F>
@@ -90,39 +114,39 @@ namespace uf
         template<typename Result, typename... Ts>
         constexpr auto min(Ts&&... args)
         {
-            return detail::min_max_1<true, Result>(std::forward<Ts>(args)...);
+            return detail::mm_helper<true, Result>(std::forward<Ts>(args)...);
         }
 
         template<typename... Ts>
         constexpr auto min(Ts&&... args)
         {
-            return detail::min_max_1<true, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+            return detail::mm_helper<true, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
         }
 
         template<typename... Ts>
         constexpr auto& min_ref(Ts&&... args)
         {
-            return detail::min_max_ref_1<true, Ts...>(std::forward<Ts>(args)...);
+            return detail::mm_ref_helper<true, Ts...>(std::forward<Ts>(args)...);
         }
 
         template<typename Result, typename... Ts>
         constexpr auto max(Ts&&... args)
         {
-            return detail::min_max_1<false, Result>(std::forward<Ts>(args)...);
+            return detail::mm_helper<false, Result>(std::forward<Ts>(args)...);
         }
 
         template<typename... Ts>
         constexpr auto max(Ts&&... args)
         {
-            return detail::min_max_1<false, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+            return detail::mm_helper<false, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
         }
 
         template<typename... Ts>
         constexpr auto& max_ref(Ts&&... args)
         {
-            return detail::min_max_ref_1<false, Ts...>(std::forward<Ts>(args)...);
+            return detail::mm_ref_helper<false, Ts...>(std::forward<Ts>(args)...);
         }
     }
-    // end namespace utils
+    // namespace utils
 }
-// end namespace uf
+// namespace uf

@@ -5,7 +5,7 @@
 */
 
 #pragma once
-#include "default_import.hpp"
+#include "utils.hpp"
 
 #ifdef __linux
 
@@ -24,6 +24,17 @@
 
 namespace uf
 {
+    template<class... Meters, typename F, typename... Args>
+    auto benchmark(F&& f, Args&&... args)
+    {
+        const tuple<Meters...> tm;
+        f(std::forward<Args>(args)...);
+        if constexpr (sizeof...(Meters) > 1)
+            return utils::for_each_tpl<true>(tm, [](const auto& meter){ return meter.seconds(); });
+        else
+            return std::get<0>(tm).seconds();
+    }
+
     template<typename TimePoint>
     class basic_time_meter
     {
@@ -131,7 +142,7 @@ namespace uf
 #endif
 
 }
-// end namespace uf
+// namespace uf
 
 
 

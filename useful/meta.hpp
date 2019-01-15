@@ -195,8 +195,29 @@ namespace uf
             {
                 using type = index_sequence<Ns...>;
             };
+
+            template<typename... Ts>
+            struct spt_helper;
+
+            template<typename Tp>
+            struct spt_helper<Tp>
+            {
+                using type = Tp;
+            };
+
+            template<typename F, typename S>
+            struct spt_helper<F, S>
+            {
+                using type = pair<F, S>;
+            };
+
+            template<typename T1, typename T2, typename T3, typename... Ts>
+            struct spt_helper<T1, T2, T3, Ts...>
+            {
+                using type = tuple<T1, T2, T3, Ts...>;
+            };
         }
-        // end namespace detail
+        // namespace detail
 
         template<typename Tp>
         struct is_tuple : public false_type { };
@@ -397,5 +418,16 @@ namespace uf
 
         template<typename... Ts>
         inline constexpr bool is_same_all_v = is_same_all<Ts...>::value;
+
+        template<typename... Ts>
+        struct spt
+        {
+            using type = typename detail::spt_helper<Ts...>::type;
+        };
+
+        template<typename... Ts>
+        using spt_t = typename spt<Ts...>::type;
     }
+    // namespace meta
 }
+// namespace uf

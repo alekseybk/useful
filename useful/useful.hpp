@@ -73,7 +73,7 @@ namespace uf
             }
         }
     }
-    // end namespace detail
+    // namespace detail
 
     void ascii_lowercase(string& s)
     {
@@ -315,4 +315,4 @@ namespace uf
         }
     };
 }
-// end namespace uf
+// namespace uf

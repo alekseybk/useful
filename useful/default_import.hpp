@@ -23,11 +23,7 @@
 
 namespace uf
 {
-    using namespace basic_types;
-    using namespace basic_types::literals;
-
     using namespace std::literals;
-    using namespace std::chrono_literals;
 
     namespace chrono = std::chrono;
     namespace this_thread = std::this_thread;

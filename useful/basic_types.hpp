@@ -9,7 +9,7 @@
 
 namespace uf
 {
-    namespace basic_types
+    inline namespace basic_types
     {
         using u8 = std::uint8_t;
         using i8 = std::int8_t;
@@ -23,7 +23,7 @@ namespace uf
         using u64 = std::uint64_t;
         using i64 = std::int64_t;
 
-        namespace literals
+        inline namespace literals
         {
             inline constexpr u8 operator"" _u8(unsigned long long int value) noexcept
             {
@@ -125,8 +125,8 @@ namespace uf
                 return reinterpret_cast<long double*>(value);
             }
         }
-        // end namespace literals
+        // namespace literals
     }
-    // end namespace basic_types
+    // namespace basic_types
 }
-// end namespace uf
+// namespace uf

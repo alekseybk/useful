@@ -20,13 +20,15 @@
 
 using namespace std;
 
+using namespace uf;
 using namespace uf::output;
 using namespace uf::input;
-using namespace uf::basic_types;
-using namespace uf::basic_types::literals;
 
 int main()
 {
-    cout << 2.1F << endl;
+    cout << benchmark<proc_time_meter, time_meter>([](int n){for(int i = 0; i < n; ++i){ }}, 1000000000) << endl;
+    tuple<int, double> a{1, 5.0};
+    utils::for_each_tpl<false>(a, [](auto& e){ e += 1; });
+    cout << a << endl;
     return 0;
 }
