@@ -24,12 +24,12 @@
 
 namespace uf
 {
-    template<class... Meters, typename F, typename... Args>
+    template<class... Ms, typename F, typename... Args>
     auto benchmark(F&& f, Args&&... args)
     {
-        const tuple<Meters...> tm;
+        const tuple<Ms...> tm;
         f(std::forward<Args>(args)...);
-        if constexpr (sizeof...(Meters) > 1)
+        if constexpr (sizeof...(Ms) > 1)
             return utils::tuple_for_each<true>(tm, [](const auto& meter){ return meter.seconds(); });
         else
             return std::get<0>(tm).seconds();

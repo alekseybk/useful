@@ -5,35 +5,35 @@
 */
 
 #pragma once
-#include "default_import.hpp"
+#include "utils.hpp"
 
 namespace uf
 {
     namespace input
     {
-        namespace detail
-        {
-            template<class Stream, typename... Ts, u64... Ns>
-            void tuple_read_helper(Stream& stream, tuple<Ts...>& t, index_sequence<Ns...>)
-            {
-                (stream >> ... >> std::get<Ns>(t));
-            }
-        }
-        // namespace detail
 
-        template<typename... StreamArgs, typename... Ts>
-        std::basic_istream<StreamArgs...>& operator>>(std::basic_istream<StreamArgs...>& stream, tuple<Ts...>& t)
-        {
-            detail::tuple_read_helper(stream, t, make_index_sequence<sizeof...(Ts)>());
-            return stream;
-        }
-
-        template<typename... StreamArgs, typename F, typename S>
-        std::basic_istream<StreamArgs...>& operator>>(std::basic_istream<StreamArgs...>& stream, pair<F, S>& p)
-        {
-            return stream >> p.first >> p.second;
-        }
     }
     // namespace input
+
+    inline namespace operators
+    {
+        inline namespace input_operators
+        {
+            template<typename... StreamArgs, typename... Ts>
+            std::basic_istream<StreamArgs...>& operator>>(std::basic_istream<StreamArgs...>& stream, tuple<Ts...>& t)
+            {
+                utils::tuple_for_each(t, [&stream](auto& e){ stream >> e; });
+                return stream;
+            }
+
+            template<typename... StreamArgs, typename F, typename S>
+            std::basic_istream<StreamArgs...>& operator>>(std::basic_istream<StreamArgs...>& stream, pair<F, S>& p)
+            {
+                return stream >> p.first >> p.second;
+            }
+        }
+        // namespace input_operators
+    }
+    // namespace operators
 }
 // namespace uf

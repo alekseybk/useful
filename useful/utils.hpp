@@ -11,88 +11,103 @@ namespace uf
 {
     namespace utils
     {
-        template<typename Owner, typename E>
-        constexpr auto&& forward_element(E&& e);
-
         namespace detail
         {
-            template<bool Minimum, typename Result, typename... Ts, meta::disable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
-            constexpr auto mm_helper(Ts&&... args)
-            {
-                static_assert(is_same_v<Result, decay_t<Result>>);
-
-                // TODO: find same types, call mm_ref_helper
-                Result m(*std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...}));
-                auto compare_function = [&m](auto&& another)
-                {
-                    if constexpr (Minimum)
-                    {
-                        if (another < m)
-                            m = std::forward(another);
-                    }
-                    else
-                    {
-                        if (another > m)
-                            m = std::forward(another);
-                    }
-                };
-                (compare_function(std::forward<Ts>(args)), ...);
-                return m;
-            }
-
-            template<bool Minimum, typename Result, typename... Ts, enable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
-            constexpr auto mm_helper(Ts&&... args)
-            {
-                static_assert(is_same_v<Result, decay_t<Result>>);
-                using type = decay_t<meta::first_t<Ts...>>;
-                const type* m = std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-                if constexpr (Minimum)
-                    ((m = (args < *m) ? &args : m), ...);
-                else
-                    ((m = (args > *m) ? &args : m), ...);
-                return Result(*m);
-            }
-
-            template<bool Minimum, typename... Ts>
-            constexpr auto& mm_ref_helper(Ts&&... args)
-            {
-                static_assert((is_lvalue_reference_v<Ts> && ...) && meta::is_same_all_v<decay_t<Ts>...>, "All arguments must be an lvalues of the same type");
-                using type = remove_reference_t<meta::first_t<Ts...>>;
-                using result_type = conditional_t<(is_const_v<remove_reference_t<Ts>> || ...), const type, type>;
-                result_type* m = std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...});
-                if constexpr (Minimum)
-                    ((m = (args < *m) ? &args : m), ...);
-                else
-                    ((m = (args > *m) ? &args : m), ...);
-                return *m;
-            }
-
             template<bool Result, typename Tuple, typename F, u64... Ns>
-            auto tuple_for_each_helper(Tuple&& t, F&& f, index_sequence<Ns...>)
+            constexpr auto tuple_for_each_helper(Tuple&& t, F&& f, index_sequence<Ns...>)
             {
                 if constexpr (Result)
-                    return tuple{f(forward_element<Tuple>(std::get<Ns>(t)))...};
+                    return tuple{f(std::get<Ns>(std::forward<Tuple>(t)))...};
                 else
-                    (f(forward_element<Tuple>(std::get<Ns>(t))), ...);
+                    (f(std::get<Ns>(std::forward<Tuple>(t))), ...);
+            }
+
+            template<bool ByKey, class AssociativeContainer, class... Rs>
+            void remove_associative_helper(AssociativeContainer& c, const Rs&... rms)
+            {
+                using value_type = typename AssociativeContainer::value_type;
+
+                for (auto i = c.cbegin(); i != c.cend();)
+                {
+                    bool result;
+                    if constexpr (meta::is_pair_v<value_type>)
+                    {
+                        if constexpr (ByKey)
+                            result = satisfies_one(i->first, rms...);
+                        else
+                            result = satisfies_one(i->second, rms...);
+                    }
+                    else
+                        result = satisfies_one(*i, rms...);
+                    if (result)
+                        i = c.erase(i);
+                    else
+                        ++i;
+                }
             }
         }
         // namespace detail
 
-        template<typename Owner, typename E>
+        template<typename Owner, typename E, enable_if_t<is_lvalue_reference_v<Owner>, int> = 0>
         constexpr auto&& forward_element(E&& e)
         {
-            using type = remove_reference_t<E>;
+            return std::forward<E>(e);
+        }
 
-            if constexpr (!is_lvalue_reference_v<E>)
-                return static_cast<type&&>(e);
-            else if constexpr (is_lvalue_reference_v<Owner>)
-                return static_cast<type&>(e);
+        template<typename Owner, typename E, disable_if_t<is_reference_v<Owner>, int> = 0>
+        constexpr auto&& forward_element(E&& e)
+        {
+            return std::move(e);
+        }
+
+        template<class SeqContainer>
+        auto position_pairs(SeqContainer&& container)
+        {
+            using value_type = typename remove_reference_t<SeqContainer>::value_type;
+            using result_type = typename meta::clean<remove_reference_t<SeqContainer>>::template type<pair<u64, value_type>>;
+
+            u64 j = 0;
+            result_type result;
+            for (auto i = container.begin(); i != container.end(); ++i, ++j)
+                result.push_back({j, utils::forward_element<SeqContainer>(*i)});
+            return result;
+        }
+
+        template<class SeqContainer, class Compare>
+        auto sort_save_position(SeqContainer&& container, const Compare& comp)
+        {
+            auto pairs = position_pairs(std::forward<SeqContainer>(container));
+            sort(pairs.begin(), pairs.end(), [&comp](const auto& a, const auto& b)
+            {
+                return comp(a.second, b.second);
+            });
+            return pairs;
+        }
+
+        template<class Element, class P, class... Ps>
+        bool satisfies_one(const Element& e, P&& p, Ps&&... ps)
+        {
+            bool result;
+            if constexpr (is_invocable_v<remove_reference_t<P>, const Element&>)
+                result = p(e);
             else
-                return static_cast<type&&>(e);
+                result = (e == p);
+            if (result)
+                return true;
+            if constexpr (sizeof...(Ps))
+                return satisfies_one(e, ps...);
+            else
+                return false;
+        }
+
+        template<class Element, class P, class... Ps>
+        bool satisfies_all(const Element& e, Ps&&... ps)
+        {
+            return (satisfies_one(e, ps) && ...);
         }
 
         template<bool Result = false, typename Tuple, typename F>
-        auto tuple_for_each(Tuple&& t, F&& f)
+        constexpr auto tuple_for_each(Tuple&& t, F&& f)
         {
             using tuple_type = remove_reference_t<Tuple>;
 
@@ -102,53 +117,52 @@ namespace uf
                 detail::tuple_for_each_helper<Result>(std::forward<Tuple>(t), f, make_index_sequence<tuple_size_v<tuple_type>>());
         }
 
-        template<typename TargetType, typename Tp, typename F>
-        void targeted_for_each(Tp&& container, const F& f)
+        template<typename Target, typename Container, typename F>
+        void targeted_for_each(Container&& c, F&& f)
         {
-            using value_type = decay_t<typename remove_reference_t<Tp>::value_type>;
+            using value_type = decay_t<typename remove_reference_t<Container>::value_type>;
 
-            if constexpr (is_same_v<decay_t<TargetType>, value_type>)
-                std::for_each(container.begin(), container.end(), f);
+            if constexpr (is_same_v<decay_t<Target>, value_type>)
+                std::for_each(c.begin(), c.end(), f);
             else
-                for (auto& value : container)
-                    targeted_for_each<TargetType>(forward_element<Tp>(value), f);
+                for (auto& value : c)
+                    targeted_for_each<Target>(forward_element<Container>(value), f);
         }
 
-        template<typename Result, typename... Ts>
-        constexpr auto min(Ts&&... args)
+        template<class AssociativeContainer, class... Rs>
+        void remove_associative_by_key(AssociativeContainer& c, Rs&&... rs)
         {
-            return detail::mm_helper<true, Result>(std::forward<Ts>(args)...);
+            detail::remove_associative_helper<true>(c, rs...);
         }
 
-        template<typename... Ts>
-        constexpr auto min(Ts&&... args)
+        template<class AssociativeContainer, class... Rs>
+        void remove_associative_by_value(AssociativeContainer& c, Rs&&... rs)
         {
-            return detail::mm_helper<true, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+            detail::remove_associative_helper<false>(c, rs...);
         }
 
-        template<typename... Ts>
-        constexpr auto& min_ref(Ts&&... args)
+        template<class SeqContainer, typename... Ps>
+        void remove_seq(SeqContainer& c, Ps&&... ps)
         {
-            return detail::mm_ref_helper<true, Ts...>(std::forward<Ts>(args)...);
+            auto move_to = c.begin();
+            for (auto& e : c)
+                if (!satisfies_one(e, ps...))
+                    *move_to++ = std::move(e);
+            c.erase(move_to, c.end());
         }
 
-        template<typename Result, typename... Ts>
-        constexpr auto max(Ts&&... args)
+        template<class Tp, template<class> class Compare>
+        class dereference_compare
         {
-            return detail::mm_helper<false, Result>(std::forward<Ts>(args)...);
-        }
+            const Compare<Tp> comp_;
 
-        template<typename... Ts>
-        constexpr auto max(Ts&&... args)
-        {
-            return detail::mm_helper<false, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
-        }
-
-        template<typename... Ts>
-        constexpr auto& max_ref(Ts&&... args)
-        {
-            return detail::mm_ref_helper<false, Ts...>(std::forward<Ts>(args)...);
-        }
+        public:
+            template<class Pointer>
+            bool operator()(const Pointer& a, const Pointer& b) const
+            {
+                return comp_(*a, *b);
+            }
+        };
     }
     // namespace utils
 }

@@ -429,5 +429,7 @@ namespace uf
         using spt_t = typename spt<Ts...>::type;
     }
     // namespace meta
+
+    using meta::disable_if_t;
 }
 // namespace uf

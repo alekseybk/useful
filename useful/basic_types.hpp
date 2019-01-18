@@ -22,8 +22,12 @@ namespace uf
 
         using u64 = std::uint64_t;
         using i64 = std::int64_t;
+    }
+    // namespace basic_types
 
-        inline namespace literals
+    inline namespace literals
+    {
+        inline namespace basic_types_literals
         {
             inline constexpr u8 operator"" _u8(unsigned long long int value) noexcept
             {
@@ -125,8 +129,8 @@ namespace uf
                 return reinterpret_cast<long double*>(value);
             }
         }
-        // namespace literals
+        // namespace basic_types_literals
     }
-    // namespace basic_types
+    // namespace literals
 }
 // namespace uf
