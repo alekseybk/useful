@@ -12,6 +12,8 @@
 #define check_equality(t1, t2) static_assert(std::is_same_v<t1, t2>)
 #define check_expr(expression, type) static_assert(std::is_same_v<decltype(expression), type>)
 
+void run_all_tests() noexcept(false);
+
 using namespace std;
 
 using namespace uf;
@@ -31,6 +33,7 @@ struct A
 
 int main()
 {
-    cout << uf::ends_with("123"s, "13"s) << endl;
+    // run_all_tests();
+    for (auto e : uf::split_strong("12  34"s, ' ')) cout << e << endl;
     return 0;
 }

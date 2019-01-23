@@ -95,20 +95,22 @@ namespace uf
         vector<pair<iter, iter>> result;
         for (auto i = c.begin(); i != c.end(); ++i)
         {
-            if (empty_seq)
-            {
-                if (utils::satisfies_one(*i, ds...))
-                    continue;
-                empty_seq = false;
-                if (n == result.size())
-                    break;
-                result.push_back({i, c.end()});
-                continue;
-            }
             if (utils::satisfies_one(*i, ds...))
             {
+                if (empty_seq)
+                    continue;
                 result.back().second = i;
                 empty_seq = true;
+                if (result.size() == n)
+                    break;
+            }
+            else
+            {
+                if (empty_seq)
+                {
+                    empty_seq = false;
+                    result.push_back({i, c.end()});
+                }
             }
         }
         return result;
@@ -136,6 +138,49 @@ namespace uf
     auto split(const SeqContainer& c, Ds&&... ds)
     {
         return detail::create_split_tuple<SeqContainer>(split_itr(c, ds...), make_index_sequence<N>());
+    }
+
+    template<class SeqContainer, class... Ds>
+    auto split_strong_itr(u64 n, const SeqContainer& c, Ds&&... ds)
+    {
+        using iter = typename SeqContainer::const_iterator;
+
+        vector<pair<iter, iter>> result;
+        iter next_item_begin = c.begin();
+        for (auto i = c.begin(); i != c.end(); ++i)
+        {
+            if (utils::satisfies_one(*i, ds...))
+            {
+                result.push_back({next_item_begin, i});
+                next_item_begin = i + 1;
+            }
+        }
+        result.push_back({next_item_begin, c.end()});
+        return result;
+    }
+
+    template<class SeqContainer, class... Ds>
+    auto split_strong_itr(const SeqContainer& c, Ds&&... ds)
+    {
+        return split_strong_itr(numeric_limits<u64>::max(), c, ds...);
+    }
+
+    template<class SeqContainer, class... Ds>
+    auto split_strong(u64 n, const SeqContainer& c, Ds&&... ds)
+    {
+        return detail::create_split_vector<SeqContainer>(split_strong_itr(n, c, ds...));
+    }
+
+    template<class SeqContainer, class... Ds>
+    auto split_strong(const SeqContainer& c, Ds&&... ds)
+    {
+        return split_strong(numeric_limits<u64>::max(), c, ds...);
+    }
+
+    template<u64 N, class SeqContainer, class... Ds>
+    auto split_strong(const SeqContainer& c, Ds&&... ds)
+    {
+        return detail::create_split_tuple<SeqContainer>(split_strong_itr(c, ds...), make_index_sequence<N>());
     }
 
     template<class SeqContainer1, class SeqContainer2, enable_if_t<meta::is_iterable_v<decay_t<SeqContainer2>>, int> = 0>

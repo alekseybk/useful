@@ -8,7 +8,7 @@ file(GLOB headers useful/useful.hpp useful/meta.hpp useful/basic_types.hpp usefu
                   useful/utils.hpp useful/output.hpp useful/input.hpp useful/time_meter.hpp useful/all.hpp
                   useful/formats.hpp useful/strings.hpp useful/mm.hpp)
 
-file(GLOB sources "main.cpp")
+file(GLOB sources "main.cpp" "test.cpp")
 
 add_executable(${PROJECT_NAME} "main.cpp" ${sources} ${headers})
 target_link_libraries(${PROJECT_NAME} "pthread")

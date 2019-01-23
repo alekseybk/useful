@@ -78,8 +78,8 @@ namespace uf::utils
         template<bool Minimum, typename First, typename... Ts>
         constexpr auto& mm_ref_helper(First& first, Ts&... args)
         {
-            using type = meta::first_t<Ts...>;
-            using result_type = conditional_t<(is_const_v<Ts> || ...), const type, type>;
+            static_assert(is_same_v<decay_t<First>, decay_t<meta::first_t<Ts...>>>);
+            using result_type = conditional_t<(is_const_v<Ts> || ...) || is_const_v<First>, const First, First>;
 
             result_type* m = &first;
             if constexpr (Minimum)
