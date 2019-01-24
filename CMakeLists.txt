@@ -10,6 +10,6 @@ file(GLOB headers useful/useful.hpp useful/meta.hpp useful/basic_types.hpp usefu
 
 file(GLOB sources "main.cpp" "test.cpp")
 
-add_executable(${PROJECT_NAME} "main.cpp" ${sources} ${headers})
+add_executable(${PROJECT_NAME} ${sources} ${headers})
 target_link_libraries(${PROJECT_NAME} "pthread")
 

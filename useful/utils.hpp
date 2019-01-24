@@ -84,26 +84,30 @@ namespace uf
             return pairs;
         }
 
-        template<class Element, class P, class... Ps>
-        bool satisfies_one(const Element& e, P&& p, Ps&&... ps)
+        template<class Element, class... Ps>
+        bool satisfies_one(const Element& e, Ps&&... ps)
         {
-            bool result;
-            if constexpr (is_invocable_v<remove_reference_t<P>, const Element&>)
-                result = p(e);
-            else
-                result = (e == p);
-            if (result)
-                return true;
-            if constexpr (sizeof...(Ps))
-                return satisfies_one(e, ps...);
-            else
-                return false;
+            const auto check_function = [&e](auto& predicate)
+            {
+                if constexpr (is_invocable_v<remove_reference_t<decltype(predicate)>, const Element&>)
+                    return predicate(e);
+                else
+                    return e == predicate;
+            };
+            return (check_function(ps) || ...);
         }
 
-        template<class Element, class P, class... Ps>
+        template<class Element, class... Ps>
         bool satisfies_all(const Element& e, Ps&&... ps)
         {
-            return (satisfies_one(e, ps) && ...);
+            const auto check_function = [&e](auto& predicate)
+            {
+                if constexpr (is_invocable_v<remove_reference_t<decltype(predicate)>, const Element&>)
+                    return pred(e);
+                else
+                    return e == predicate;
+            };
+            return (check_function(ps) && ...);
         }
 
         template<bool Result = false, typename Tuple, typename F>

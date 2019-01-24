@@ -32,7 +32,7 @@ namespace uf
         }
 
         template<class SeqContainer, class IterVector>
-        auto create_split_vector(IterVector&& iters)
+        auto build_split_vector(IterVector&& iters)
         {
             vector<SeqContainer> result;
             result.reserve(iters.size());
@@ -42,7 +42,7 @@ namespace uf
         }
 
         template<class SeqContainer, class IterVector, u64... Ns>
-        auto create_split_tuple(IterVector&& iters, index_sequence<Ns...>)
+        auto build_split_tuple(IterVector&& iters, index_sequence<Ns...>)
         {
             return tuple(SeqContainer(iters[Ns].first, iters[Ns].second)...);
         }
@@ -125,7 +125,7 @@ namespace uf
     template<class SeqContainer, class... Ds>
     auto split(u64 n, const SeqContainer& c, Ds&&... ds)
     {
-        return detail::create_split_vector<SeqContainer>(split_itr(n, c, ds...));
+        return detail::build_split_vector<SeqContainer>(split_itr(n, c, ds...));
     }
 
     template<class SeqContainer, class... Ds>
@@ -137,7 +137,7 @@ namespace uf
     template<u64 N, class SeqContainer, class... Ds>
     auto split(const SeqContainer& c, Ds&&... ds)
     {
-        return detail::create_split_tuple<SeqContainer>(split_itr(c, ds...), make_index_sequence<N>());
+        return detail::build_split_tuple<SeqContainer>(split_itr(c, ds...), make_index_sequence<N>());
     }
 
     template<class SeqContainer, class... Ds>
@@ -168,7 +168,7 @@ namespace uf
     template<class SeqContainer, class... Ds>
     auto split_strong(u64 n, const SeqContainer& c, Ds&&... ds)
     {
-        return detail::create_split_vector<SeqContainer>(split_strong_itr(n, c, ds...));
+        return detail::build_split_vector<SeqContainer>(split_strong_itr(n, c, ds...));
     }
 
     template<class SeqContainer, class... Ds>
@@ -180,7 +180,7 @@ namespace uf
     template<u64 N, class SeqContainer, class... Ds>
     auto split_strong(const SeqContainer& c, Ds&&... ds)
     {
-        return detail::create_split_tuple<SeqContainer>(split_strong_itr(c, ds...), make_index_sequence<N>());
+        return detail::build_split_tuple<SeqContainer>(split_strong_itr(c, ds...), make_index_sequence<N>());
     }
 
     template<class SeqContainer1, class SeqContainer2, enable_if_t<meta::is_iterable_v<decay_t<SeqContainer2>>, int> = 0>

@@ -4,36 +4,13 @@
  * See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt
 */
 
-#include <iostream>
-#include <fstream>
-
-#include "useful/all.hpp"
-
-#define check_equality(t1, t2) static_assert(std::is_same_v<t1, t2>)
-#define check_expr(expression, type) static_assert(std::is_same_v<decltype(expression), type>)
-
-void run_all_tests() noexcept(false);
-
-using namespace std;
-
-using namespace uf;
-using namespace uf::output;
-using namespace uf::input;
-
-struct A
+namespace uf::test
 {
-    int value;
-    A(int v = 0) : value(v) { cout << __PRETTY_FUNCTION__ << endl; }
-    A(const A&) { cout << __PRETTY_FUNCTION__ << endl; }
-    A(A&&) { cout << __PRETTY_FUNCTION__ << endl; }
-    A& operator=(A&&) { cout << __PRETTY_FUNCTION__ << endl; return *this; }
-    A& operator=(const A&) { cout << __PRETTY_FUNCTION__ << endl; return *this; }
-    bool operator>(const A& a) { return value > a.value; }
-};
+    void run_all_tests();
+}
 
 int main()
 {
-    // run_all_tests();
-    for (auto e : uf::split_strong("12  34"s, ' ')) cout << e << endl;
+    uf::test::run_all_tests();
     return 0;
 }
