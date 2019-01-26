@@ -21,13 +21,13 @@ namespace uf::utils
         {
 
         }
+        */
 
         template<bool Minimum, typename Result, typename... Ts, meta::disable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
         constexpr Result mm_helper(Ts&&... args)
         {
             static_assert(is_same_v<Result, decay_t<Result>>);
 
-            // TODO: find same types, call mm_ref_helper
             Result m(*std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...}));
             constexpr auto mm_update = [&m](auto&& another) -> void
             {
@@ -45,7 +45,6 @@ namespace uf::utils
             (mm_update(std::forward<Ts>(args)), ...);
             return m;
         }
-        */
 
         template<bool Minimum, u64 M, u64 Cur, typename Result, typename TupleOfRefs>
         constexpr Result mm_same_types_helper(TupleOfRefs&& t)

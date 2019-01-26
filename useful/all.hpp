@@ -6,7 +6,6 @@
 
 #pragma once
 #include "default_import.hpp"
-#include "useful.hpp"
 #include "utils.hpp"
 #include "meta.hpp"
 #include "input.hpp"

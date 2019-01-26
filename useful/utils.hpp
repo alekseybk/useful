@@ -11,6 +11,9 @@ namespace uf
 {
     namespace utils
     {
+        template<class E, class... Ps>
+        bool satisfies_one(const E& e, Ps&&... ps);
+
         namespace detail
         {
             template<bool Result, typename Tuple, typename F, u64... Ns>
@@ -22,28 +25,40 @@ namespace uf
                     (f(std::get<Ns>(std::forward<Tuple>(t))), ...);
             }
 
-            template<bool ByKey, class AssociativeContainer, class... Rs>
-            void remove_associative_helper(AssociativeContainer& c, const Rs&... rms)
+            template<bool ByKey, typename E, class... Rs>
+            bool remove_assoc_element_check(const E& e, Rs&&... rs)
             {
-                using value_type = typename AssociativeContainer::value_type;
+                if constexpr (meta::is_pair_v<E>)
+                {
+                    if constexpr (ByKey)
+                        return satisfies_one(e.first, rs...);
+                    else
+                        return satisfies_one(e.second, rs...);
+                }
+                else
+                    return satisfies_one(e, rs...);
+            }
 
+            template<bool ByKey, class AssocContainer, class... Rs>
+            void remove_assoc_helper(AssocContainer& c, Rs&&... rs)
+            {
                 for (auto i = c.cbegin(); i != c.cend();)
                 {
-                    bool result;
-                    if constexpr (meta::is_pair_v<value_type>)
-                    {
-                        if constexpr (ByKey)
-                            result = satisfies_one(i->first, rms...);
-                        else
-                            result = satisfies_one(i->second, rms...);
-                    }
-                    else
-                        result = satisfies_one(*i, rms...);
-                    if (result)
+                    if (detail::remove_assoc_element_check<ByKey>(*i, rs...))
                         i = c.erase(i);
                     else
                         ++i;
                 }
+            }
+
+            template<bool ByKey, class AssocContainer, class... Rs>
+            AssocContainer remove_assoc_copy_helper(const AssocContainer& c, Rs&&... rs)
+            {
+                AssocContainer result;
+                for (auto i = c.cbegin(); i != c.cend(); ++i)
+                    if (!detail::remove_assoc_element_check<ByKey>(*i, rs...))
+                        result.insert(*i);
+                return result;
             }
         }
         // namespace detail
@@ -84,12 +99,12 @@ namespace uf
             return pairs;
         }
 
-        template<class Element, class... Ps>
-        bool satisfies_one(const Element& e, Ps&&... ps)
+        template<class E, class... Ps>
+        bool satisfies_one(const E& e, Ps&&... ps)
         {
             const auto check_function = [&e](auto& predicate)
             {
-                if constexpr (is_invocable_v<remove_reference_t<decltype(predicate)>, const Element&>)
+                if constexpr (is_invocable_v<remove_reference_t<decltype(predicate)>, const E&>)
                     return predicate(e);
                 else
                     return e == predicate;
@@ -97,13 +112,13 @@ namespace uf
             return (check_function(ps) || ...);
         }
 
-        template<class Element, class... Ps>
-        bool satisfies_all(const Element& e, Ps&&... ps)
+        template<class E, class... Ps>
+        bool satisfies_all(const E& e, Ps&&... ps)
         {
             const auto check_function = [&e](auto& predicate)
             {
-                if constexpr (is_invocable_v<remove_reference_t<decltype(predicate)>, const Element&>)
-                    return pred(e);
+                if constexpr (is_invocable_v<remove_reference_t<decltype(predicate)>, const E&>)
+                    return predicate(e);
                 else
                     return e == predicate;
             };
@@ -133,38 +148,114 @@ namespace uf
                     targeted_for_each<Target>(forward_element<Container>(value), f);
         }
 
-        template<class AssociativeContainer, class... Rs>
-        void remove_associative_by_key(AssociativeContainer& c, Rs&&... rs)
+        template<class AssocContainer, class... Rs>
+        void remove_assoc_key(AssocContainer& c, Rs&&... rs)
         {
-            detail::remove_associative_helper<true>(c, rs...);
+            detail::remove_assoc_helper<true>(c, rs...);
         }
 
-        template<class AssociativeContainer, class... Rs>
-        void remove_associative_by_value(AssociativeContainer& c, Rs&&... rs)
+        template<class AssocContainer, class... Rs>
+        void remove_assoc_value(AssocContainer& c, Rs&&... rs)
         {
-            detail::remove_associative_helper<false>(c, rs...);
+            detail::remove_assoc_helper<false>(c, rs...);
         }
 
-        template<class SeqContainer, typename... Ps>
-        void remove_seq(SeqContainer& c, Ps&&... ps)
+        template<class AssocContainer, class... Rs>
+        AssocContainer remove_assoc_copy_key(const AssocContainer& c, Rs&&... rs)
         {
-            auto move_to = c.begin();
+            return detail::remove_assoc_copy_helper<true>(c, rs...);
+        }
+
+        template<class AssocContainer, class... Rs>
+        AssocContainer remove_assoc_copy_value(const AssocContainer& c, Rs&&... rs)
+        {
+            return detail::remove_assoc_copy_helper<false>(c, rs...);
+        }
+
+        template<class SeqContainer, typename... Rs>
+        void remove_seq(SeqContainer& c, Rs&&... rs)
+        {
+            auto cur_end = c.begin();
             for (auto& e : c)
-                if (!satisfies_one(e, ps...))
-                    *move_to++ = std::move(e);
-            c.erase(move_to, c.end());
+                if (!satisfies_one(e, rs...))
+                    *cur_end++ = std::move(e);
+            c.erase(cur_end, c.end());
         }
 
-        template<class Tp, template<class> class Compare>
-        class dereference_compare
+        template<class SeqContainer, typename... Rs>
+        SeqContainer remove_seq_copy(const SeqContainer& c, Rs&&... rs)
         {
-            const Compare<Tp> comp_;
+            SeqContainer result;
+            for (const auto& e : c)
+                if (!satisfies_one(e, rs...))
+                    result.push_back(e);
+            return result;
+        }
+
+        class spinlock
+        {
+            atomic_flag flag_ = ATOMIC_FLAG_INIT;
 
         public:
-            template<class Pointer>
-            bool operator()(const Pointer& a, const Pointer& b) const
+            bool try_lock()
+            {
+                return !flag_.test_and_set(std::memory_order_acquire);
+            }
+
+            template<typename Period = std::micro>
+            void lock(i64 interval = 0)
+            {
+                while (flag_.test_and_set(std::memory_order_acquire))
+                {
+                    if (interval)
+                        this_thread::sleep_for(chrono::duration<i64, Period>(interval));
+                    else
+                        this_thread::yield();
+                }
+            }
+
+            void unlock()
+            {
+                flag_.clear(std::memory_order_release);
+            }
+        };
+
+        template<class Compare>
+        class dereference_compare
+        {
+            const Compare comp_;
+
+        public:
+            template<class P1, class P2>
+            bool operator()(const P1& a, const P2& b) const
             {
                 return comp_(*a, *b);
+            }
+        };
+
+        template<class Compare>
+        class first_compare
+        {
+            const Compare comp_;
+
+        public:
+            template<typename P1, typename P2>
+            bool operator()(const P1& a, const P2& b) const
+            {
+                return comp_(a.first, b.first);
+            }
+        };
+
+        template<class Compare>
+        class second_compare
+        {
+            const Compare comp_;
+
+        public:
+            template<typename P1, typename P2>
+            bool operator()(const P1& a, const P2& b) const
+            {
+                return comp_(a.second, b.second);
             }
         };
     }
