@@ -14,7 +14,7 @@
 
 #elif _WIN32
 
-#include <Windows.h>
+#include <windows.h>
 
 #else
 
@@ -22,24 +22,21 @@
 
 #endif
 
-namespace uf
+namespace uf::bench
 {
-    template<class... Ms, typename F, typename... Args>
-    auto benchmark(F&& f, Args&&... args)
+    template<class Meter, typename F, typename... Args>
+    double benchmark(F&& f, Args&&... args)
     {
-        const tuple<Ms...> tm;
-        f(std::forward<Args>(args)...);
-        if constexpr (sizeof...(Ms) > 1)
-            return utils::tuple_for_each<true>(tm, [](const auto& meter){ return meter.seconds(); });
-        else
-            return std::get<0>(tm).seconds();
+        const Meter tm;
+        std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+        return tm.seconds();
     }
 
     template<typename TimePoint>
     class basic_time_meter
     {
-        function<TimePoint()> get_now_;
-        function<double(TimePoint, TimePoint)> get_sec_;
+        std::function<TimePoint()> get_now_;
+        std::function<double(TimePoint, TimePoint)> get_sec_;
 
         TimePoint begin_;
         TimePoint stop_;
@@ -97,17 +94,17 @@ namespace uf
         }
     };
 
-    class time_meter : public basic_time_meter<chrono::high_resolution_clock::time_point>
+    class time_meter : public basic_time_meter<std::chrono::high_resolution_clock::time_point>
     {
     public:
-        using time_point = chrono::high_resolution_clock::time_point;
+        using time_point = std::chrono::high_resolution_clock::time_point;
 
-        time_meter() : basic_time_meter<time_point>(chrono::high_resolution_clock::now, get_seconds) { }
+        time_meter() : basic_time_meter<time_point>(std::chrono::high_resolution_clock::now, get_seconds) { }
 
     private:
         static double get_seconds(time_point p1, time_point p2)
         {
-            return static_cast<double>((p2 - p1).count()) / chrono::high_resolution_clock::period::den;
+            return static_cast<double>((p2 - p1).count()) / std::chrono::high_resolution_clock::period::den;
         }
     };
 
@@ -142,7 +139,7 @@ namespace uf
 #endif
 
 }
-// namespace uf
+// namespace uf::bench
 
 
 

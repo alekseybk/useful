@@ -9,10 +9,11 @@
 
 namespace uf
 {
-    inline namespace basic_types
+    inline namespace ints
     {
         using u8 = std::uint8_t;
         using i8 = std::int8_t;
+        using byte = u8;
 
         using u16 = std::uint16_t;
         using i16 = std::int16_t;
@@ -23,11 +24,51 @@ namespace uf
         using u64 = std::uint64_t;
         using i64 = std::int64_t;
     }
-    // namespace basic_types
+    // namespace ints
 
     inline namespace literals
     {
-        inline namespace basic_types_literals
+        inline namespace arith
+        {
+            inline constexpr u64 operator"" _pow2(unsigned long long int power) noexcept
+            {
+                u64 result = 1;
+                for (u64 i = 0; i < power; ++i)
+                    result *= 2;
+                return result;
+            }
+
+            inline constexpr u64 operator"" _pow10(unsigned long long int power) noexcept
+            {
+                u64 result = 1;
+                for (u64 i = 0; i < power; ++i)
+                    result *= 10;
+                return result;
+            }
+
+            inline constexpr u64 operator"" _K(unsigned long long int value) noexcept
+            {
+                return value * 3_pow10;
+            }
+
+            inline constexpr u64 operator"" _M(unsigned long long int value) noexcept
+            {
+                return value * 6_pow10;
+            }
+
+            inline constexpr u64 operator"" _G(unsigned long long int value) noexcept
+            {
+                return value * 9_pow10;
+            }
+
+            inline constexpr u64 operator"" _T(unsigned long long int value) noexcept
+            {
+                return value * 12_pow10;
+            }
+        }
+        // namespace arith
+
+        inline namespace conv
         {
             inline constexpr u8 operator"" _u8(unsigned long long int value) noexcept
             {
@@ -129,7 +170,7 @@ namespace uf
                 return reinterpret_cast<long double*>(value);
             }
         }
-        // namespace basic_types_literals
+        // namespace conv
     }
     // namespace literals
 }

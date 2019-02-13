@@ -5,8 +5,6 @@
 */
 
 #pragma once
-#include "default_import.hpp"
-
 #include "meta.hpp"
 
 namespace uf::utils
@@ -23,14 +21,15 @@ namespace uf::utils
         }
         */
 
-        template<bool Minimum, typename Result, typename... Ts, meta::disable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
+        template<bool Minimum, typename Result, typename... Ts, meta::disable_if_t<meta::is_same_all_v<std::decay_t<Ts>...>, int> = 0>
         constexpr Result mm_helper(Ts&&... args)
         {
-            static_assert(is_same_v<Result, decay_t<Result>>);
+            static_assert(std::is_same_v<Result, std::decay_t<Result>>);
 
-            Result m(*std::get<0>(tuple<remove_reference_t<Ts>*...>{&args...}));
+            Result m(*std::get<0>(std::tuple<std::remove_reference_t<Ts>*...>{&args...}));
             constexpr auto mm_update = [&m](auto&& another) -> void
             {
+                // TODO: forward tmpl arg
                 if constexpr (Minimum)
                 {
                     if (another < m)
@@ -49,7 +48,7 @@ namespace uf::utils
         template<bool Minimum, u64 M, u64 Cur, typename Result, typename TupleOfRefs>
         constexpr Result mm_same_types_helper(TupleOfRefs&& t)
         {
-            if constexpr (Cur == tuple_size_v<remove_reference_t<TupleOfRefs>>)
+            if constexpr (Cur == std::tuple_size_v<std::remove_reference_t<TupleOfRefs>>)
                 return std::get<M>(std::move(t));
             else
             {
@@ -67,18 +66,18 @@ namespace uf::utils
             }
         }
 
-        template<bool Minimum, typename Result, typename... Ts, enable_if_t<meta::is_same_all_v<decay_t<Ts>...>, int> = 0>
+        template<bool Minimum, typename Result, typename... Ts, std::enable_if_t<meta::is_same_all_v<std::decay_t<Ts>...>, int> = 0>
         constexpr Result mm_helper(Ts&&... args)
         {
-            static_assert(is_same_v<Result, decay<Result>>);
+            static_assert(std::is_same_v<Result, std::decay_t<Result>>);
             return mm_same_types_helper<Minimum, 0, 0, Result>(std::forward_as_tuple(std::forward<Ts>(args)...));
         }
 
         template<bool Minimum, typename First, typename... Ts>
         constexpr auto& mm_ref_helper(First& first, Ts&... args)
         {
-            static_assert(is_same_v<decay_t<First>, decay_t<meta::first_t<Ts...>>>);
-            using result_type = conditional_t<(is_const_v<Ts> || ...) || is_const_v<First>, const First, First>;
+            static_assert(std::is_same_v<std::decay_t<First>, std::decay_t<meta::first_t<Ts...>>>);
+            using result_type = std::conditional_t<(std::is_const_v<Ts> || ...) || std::is_const_v<First>, const First, First>;
 
             result_type* m = &first;
             if constexpr (Minimum)
@@ -99,7 +98,7 @@ namespace uf::utils
     template<typename... Ts>
     constexpr auto min(Ts&&... args)
     {
-        return detail::mm_helper<true, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+        return detail::mm_helper<true, std::decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
     }
 
     template<typename... Ts>
@@ -117,7 +116,7 @@ namespace uf::utils
     template<typename... Ts>
     constexpr auto max(Ts&&... args)
     {
-        return detail::mm_helper<false, decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+        return detail::mm_helper<false, std::decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
     }
 
     template<typename... Ts>

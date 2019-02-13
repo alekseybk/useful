@@ -5,36 +5,16 @@
 */
 
 #pragma once
-#include "default_import.hpp"
-
 #include "utils.hpp"
 
-namespace uf
+namespace uf::strings
 {
     namespace detail
     {
-        template<bool Lowercase, class String>
-        void ascii_case_helper(String& s)
-        {
-            for (auto& c : s)
-            {
-                if constexpr (Lowercase)
-                {
-                    if (c >= 'A' && c <= 'Z')
-                        c += 'a' - 'A';
-                }
-                else
-                {
-                    if (c >= 'a' && c <= 'z')
-                        c -= 'a' - 'A';
-                }
-            }
-        }
-
         template<class SeqContainer, class IterVector>
         auto build_split_vector(IterVector&& iters)
         {
-            vector<SeqContainer> result;
+            std::vector<SeqContainer> result;
             result.reserve(iters.size());
             for (auto [b, e] : iters)
                 result.emplace_back(b, e);
@@ -42,23 +22,27 @@ namespace uf
         }
 
         template<class SeqContainer, class IterVector, u64... Ns>
-        auto build_split_tuple(IterVector&& iters, index_sequence<Ns...>)
+        auto build_split_tuple(IterVector&& iters, std::index_sequence<Ns...>)
         {
-            return tuple(SeqContainer(iters[Ns].first, iters[Ns].second)...);
+            return std::tuple(SeqContainer(iters[Ns].first, iters[Ns].second)...);
         }
     }
     // namespace detail
 
     template<class String>
-    void ascii_lowercase(String& s)
+    void lowercase(String& s)
     {
-        detail::ascii_case_helper<true>(s);
+        for (auto& c : s)
+            if (c >= 'A' && c <= 'Z')
+                c += 'a' - 'A';
     }
 
     template<class String>
-    void ascii_uppercase(String& s)
+    void uppercase(String& s)
     {
-        detail::ascii_case_helper<false>(s);
+        for (auto& c : s)
+            if (c >= 'a' && c <= 'z')
+                c -= 'a' - 'A';
     }
 
     template<class SeqContainer, typename... Ps>
@@ -92,7 +76,7 @@ namespace uf
         using iter = typename SeqContainer::const_iterator;
 
         bool empty_seq = true;
-        vector<pair<iter, iter>> result;
+        std::vector<std::pair<iter, iter>> result;
         for (auto i = c.begin(); i != c.end(); ++i)
         {
             if (utils::satisfies_one(*i, ds...))
@@ -119,7 +103,7 @@ namespace uf
     template<class SeqContainer, class... Ds>
     auto split_itr(const SeqContainer& c, Ds&&... ds)
     {
-        return split_itr(numeric_limits<u64>::max(), c, ds...);
+        return split_itr(std::numeric_limits<u64>::max(), c, ds...);
     }
 
     template<class SeqContainer, class... Ds>
@@ -131,13 +115,13 @@ namespace uf
     template<class SeqContainer, class... Ds>
     auto split(const SeqContainer& c, Ds&&... ds)
     {
-        return split(numeric_limits<u64>::max(), c, ds...);
+        return split(std::numeric_limits<u64>::max(), c, ds...);
     }
 
     template<u64 N, class SeqContainer, class... Ds>
     auto split(const SeqContainer& c, Ds&&... ds)
     {
-        return detail::build_split_tuple<SeqContainer>(split_itr(c, ds...), make_index_sequence<N>());
+        return detail::build_split_tuple<SeqContainer>(split_itr(c, ds...), std::make_index_sequence<N>());
     }
 
     template<class SeqContainer, class... Ds>
@@ -145,7 +129,7 @@ namespace uf
     {
         using iter = typename SeqContainer::const_iterator;
 
-        vector<pair<iter, iter>> result;
+        std::vector<std::pair<iter, iter>> result;
         iter next_item_begin = c.begin();
         for (auto i = c.begin(); i != c.end(); ++i)
         {
@@ -162,7 +146,7 @@ namespace uf
     template<class SeqContainer, class... Ds>
     auto split_strong_itr(const SeqContainer& c, Ds&&... ds)
     {
-        return split_strong_itr(numeric_limits<u64>::max(), c, ds...);
+        return split_strong_itr(std::numeric_limits<u64>::max(), c, ds...);
     }
 
     template<class SeqContainer, class... Ds>
@@ -174,16 +158,16 @@ namespace uf
     template<class SeqContainer, class... Ds>
     auto split_strong(const SeqContainer& c, Ds&&... ds)
     {
-        return split_strong(numeric_limits<u64>::max(), c, ds...);
+        return split_strong(std::numeric_limits<u64>::max(), c, ds...);
     }
 
     template<u64 N, class SeqContainer, class... Ds>
     auto split_strong(const SeqContainer& c, Ds&&... ds)
     {
-        return detail::build_split_tuple<SeqContainer>(split_strong_itr(c, ds...), make_index_sequence<N>());
+        return detail::build_split_tuple<SeqContainer>(split_strong_itr(c, ds...), std::make_index_sequence<N>());
     }
 
-    template<class SeqContainer1, class SeqContainer2, enable_if_t<meta::is_iterable_v<decay_t<SeqContainer2>>, int> = 0>
+    template<class SeqContainer1, class SeqContainer2, std::enable_if_t<meta::is_iterable_v<std::decay_t<SeqContainer2>>, int> = 0>
     bool starts_with(const SeqContainer1& c, const SeqContainer2& pattern)
     {
         if (pattern.size() > c.size())
@@ -194,13 +178,13 @@ namespace uf
         return true;
     }
 
-    template<class SeqContainer1, class First, disable_if_t<meta::is_iterable_v<decay_t<First>>, int> = 0>
+    template<class SeqContainer1, class First, meta::disable_if_t<meta::is_iterable_v<std::decay_t<First>>, int> = 0>
     bool starts_with(const SeqContainer1& c, const First& first)
     {
         return !c.empty() && *c.begin() == first;
     }
 
-    template<class SeqContainer1, class SeqContainer2, enable_if_t<meta::is_iterable_v<decay_t<SeqContainer2>>, int> = 0>
+    template<class SeqContainer1, class SeqContainer2, std::enable_if_t<meta::is_iterable_v<std::decay_t<SeqContainer2>>, int> = 0>
     bool ends_with(const SeqContainer1& c, const SeqContainer2& pattern)
     {
         if (pattern.size() > c.size())
@@ -211,7 +195,7 @@ namespace uf
         return true;
     }
 
-    template<class SeqContainer1, class First, disable_if_t<meta::is_iterable_v<decay_t<First>>, int> = 0>
+    template<class SeqContainer1, class First, meta::disable_if_t<meta::is_iterable_v<std::decay_t<First>>, int> = 0>
     bool ends_with(const SeqContainer1& c, const First& first)
     {
         return !c.empty() && *c.rbegin() == first;
