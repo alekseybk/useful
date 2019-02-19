@@ -7,7 +7,7 @@
 #pragma once
 #include "import.hpp"
 
-namespace uf::meta
+namespace uf::mt
 {
     template<template<typename> typename P, typename... Ts>
     inline constexpr bool is_satisfies_one_v = (P<Ts>::value || ...);
@@ -167,20 +167,11 @@ namespace uf::meta
             using type = std::tuple<Types...>;
         };
 
-        template<template<typename...> typename Clean, typename Tuple>
-        struct tuple_apply_to_clean_helper;
-
-        template<template<typename...> typename Clean, typename... Ts>
-        struct tuple_apply_to_clean_helper<Clean, std::tuple<Ts...>>
-        {
-            using type = Clean<Ts...>;
-        };
-
         template<template<typename...> typename Expected, typename Tested>
-        struct is_same_tmpl_helper : public std::false_type { };
+        struct is_same_template_helper : public std::false_type { };
 
         template<template<typename...> typename Expected, typename... Ts>
-        struct is_same_tmpl_helper<Expected, Expected<Ts...>> : public std::true_type { };
+        struct is_same_template_helper<Expected, Expected<Ts...>> : public std::true_type { };
 
         template<u64 Begin, u64 End, u64... Ns>
         struct make_custom_index_sequence_helper
@@ -192,27 +183,6 @@ namespace uf::meta
         struct make_custom_index_sequence_helper<End, End, Ns...>
         {
             using type = std::index_sequence<Ns...>;
-        };
-
-        template<typename... Ts>
-        struct spt_helper;
-
-        template<typename Tp>
-        struct spt_helper<Tp>
-        {
-            using type = Tp;
-        };
-
-        template<typename F, typename S>
-        struct spt_helper<F, S>
-        {
-            using type = std::pair<F, S>;
-        };
-
-        template<typename T1, typename T2, typename T3, typename... Ts>
-        struct spt_helper<T1, T2, T3, Ts...>
-        {
-            using type = std::tuple<T1, T2, T3, Ts...>;
         };
     }
     // namespace detail
@@ -325,35 +295,44 @@ namespace uf::meta
     template<typename Tp, u64 Index, typename Tuple>
     using tuple_replace_index_t = typename tuple_replace_index<Tp, Index, Tuple>::type;
 
-    template<template<typename...> typename Clean, typename Tuple>
-    struct tuple_apply_to_clean
-    {
-        using type = typename detail::tuple_apply_to_clean_helper<Clean, Tuple>::type;
-    };
-
-    template<template<typename...> typename Clean, typename Tuple>
-    using tuple_apply_to_clean_t = typename tuple_apply_to_clean<Clean, Tuple>::type;
-
     template<typename Tp>
     struct clean;
 
     template<template<typename...> typename Tp, typename... Ts>
     struct clean<Tp<Ts...>>
     {
-        template<typename... Types>
-        using type = Tp<Types...>;
+        static constexpr u64 args = sizeof...(Ts);
 
-        using args_tuple = std::tuple<Ts...>;
+        template<typename... Ts_>
+        using type = Tp<Ts_...>;
+
+        template<u64 N>
+        using nth = std::tuple_element_t<N, std::tuple<Ts...>>;
     };
 
-    template<template<typename...> typename Expected, typename Tested>
-    struct is_same_tmpl
+    template<typename Tp, typename... Ts>
+    using clean_t = typename clean<Tp>::template type<Ts...>;
+
+    template<template<typename...> typename Clean, typename Tp>
+    struct clean_copy_args;
+
+    template<template<typename...> typename Clean, template<typename...> typename Tp, typename... Ts>
+    struct clean_copy_args<Clean, Tp<Ts...>>
     {
-        static constexpr bool value = detail::is_same_tmpl_helper<Expected, std::decay_t<Tested>>::value;
+        using type = Clean<Ts...>;
+    };
+
+    template<template<typename...> typename Clean, typename Tp>
+    using clean_copy_args_t = typename clean_copy_args<Clean, Tp>::type;
+
+    template<template<typename...> typename Expected, typename Tested>
+    struct is_same_template
+    {
+        static constexpr bool value = detail::is_same_template_helper<Expected, std::decay_t<Tested>>::value;
     };
 
     template<template<typename...> typename Expected, typename Tested>
-    inline constexpr bool is_same_tmpl_v =  is_same_tmpl<Expected, std::decay_t<Tested>>::value;
+    inline constexpr bool is_same_template_v =  is_same_template<Expected, std::decay_t<Tested>>::value;
 
     template<typename... Ts>
     using first_t = std::tuple_element_t<0, std::tuple<Ts...>>;
@@ -382,10 +361,7 @@ namespace uf::meta
     struct function_trait<R(*)(Args...)> : public function_trait<R(Args...)> { };
 
     template<class C, class R, class... Args>
-    struct function_trait<R(C::*)(Args...)> : public function_trait<R(Args...)>
-    {
-        using member_of = C;
-    };
+    struct function_trait<R(C::*)(Args...)> : public function_trait<R(Args...)> { };
 
     template<u64 Begin, u64 End>
     using make_custom_index_sequence = typename detail::make_custom_index_sequence_helper<Begin, End>::type;
@@ -420,21 +396,6 @@ namespace uf::meta
     template<class Tp>
     inline constexpr bool is_dereferenceable_v = is_dereferenceable<Tp>::value;
 
-    template<class Tp, typename = void>
-    struct iterable_level
-    {
-        static constexpr u64 value = 0;
-    };
-
-    template<class Tp>
-    struct iterable_level<Tp, std::enable_if_t<is_iterable_v<Tp>>>
-    {
-        static constexpr u64 value = 1 + iterable_level<typename Tp::value_type>::value;
-    };
-
-    template<typename Container>
-    inline constexpr u64 iterable_level_v = iterable_level<Container>::value;
-
     template<typename... Ts>
     struct is_same_all
     {
@@ -446,14 +407,5 @@ namespace uf::meta
 
     template<typename... Ts>
     inline constexpr bool is_same_all_v = is_same_all<Ts...>::value;
-
-    template<typename... Ts>
-    struct spt
-    {
-        using type = typename detail::spt_helper<Ts...>::type;
-    };
-
-    template<typename... Ts>
-    using spt_t = typename spt<Ts...>::type;
 }
-// namespace uf::meta
+// namespace uf::mt

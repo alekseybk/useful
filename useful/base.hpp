@@ -28,7 +28,7 @@ namespace uf
 
     inline namespace literals
     {
-        inline namespace arith
+        inline namespace arith_literals
         {
             inline constexpr u64 operator"" _pow2(unsigned long long int power) noexcept
             {
@@ -66,9 +66,9 @@ namespace uf
                 return value * 12_pow10;
             }
         }
-        // namespace arith
+        // namespace arith_literals
 
-        inline namespace conv
+        inline namespace conv_literals
         {
             inline constexpr u8 operator"" _u8(unsigned long long int value) noexcept
             {
@@ -170,7 +170,7 @@ namespace uf
                 return reinterpret_cast<long double*>(value);
             }
         }
-        // namespace conv
+        // namespace conv_literals
     }
     // namespace literals
 }

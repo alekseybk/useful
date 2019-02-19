@@ -79,7 +79,7 @@ namespace uf::strings
         std::vector<std::pair<iter, iter>> result;
         for (auto i = c.begin(); i != c.end(); ++i)
         {
-            if (utils::satisfies_one(*i, ds...))
+            if (ls::satisfies_one(*i, ds...))
             {
                 if (empty_seq)
                     continue;
@@ -167,7 +167,7 @@ namespace uf::strings
         return detail::build_split_tuple<SeqContainer>(split_strong_itr(c, ds...), std::make_index_sequence<N>());
     }
 
-    template<class SeqContainer1, class SeqContainer2, std::enable_if_t<meta::is_iterable_v<std::decay_t<SeqContainer2>>, int> = 0>
+    template<class SeqContainer1, class SeqContainer2, std::enable_if_t<mt::is_iterable_v<std::decay_t<SeqContainer2>>, int> = 0>
     bool starts_with(const SeqContainer1& c, const SeqContainer2& pattern)
     {
         if (pattern.size() > c.size())
@@ -178,13 +178,13 @@ namespace uf::strings
         return true;
     }
 
-    template<class SeqContainer1, class First, meta::disable_if_t<meta::is_iterable_v<std::decay_t<First>>, int> = 0>
+    template<class SeqContainer1, class First, mt::disable_if_t<mt::is_iterable_v<std::decay_t<First>>, int> = 0>
     bool starts_with(const SeqContainer1& c, const First& first)
     {
         return !c.empty() && *c.begin() == first;
     }
 
-    template<class SeqContainer1, class SeqContainer2, std::enable_if_t<meta::is_iterable_v<std::decay_t<SeqContainer2>>, int> = 0>
+    template<class SeqContainer1, class SeqContainer2, std::enable_if_t<mt::is_iterable_v<std::decay_t<SeqContainer2>>, int> = 0>
     bool ends_with(const SeqContainer1& c, const SeqContainer2& pattern)
     {
         if (pattern.size() > c.size())
@@ -195,7 +195,7 @@ namespace uf::strings
         return true;
     }
 
-    template<class SeqContainer1, class First, meta::disable_if_t<meta::is_iterable_v<std::decay_t<First>>, int> = 0>
+    template<class SeqContainer1, class First, mt::disable_if_t<mt::is_iterable_v<std::decay_t<First>>, int> = 0>
     bool ends_with(const SeqContainer1& c, const First& first)
     {
         return !c.empty() && *c.rbegin() == first;

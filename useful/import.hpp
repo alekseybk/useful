@@ -36,8 +36,3 @@
 
 #include "base.hpp"
 
-namespace uf
-{
-    using namespace std::literals;
-}
-// namespace uf

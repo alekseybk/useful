@@ -4,13 +4,8 @@
  * See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt
 */
 
-namespace uf::test
-{
-    void run_all_tests();
-}
-
-int main()
-{
-    uf::test::run_all_tests();
-    return 0;
-}
+#pragma once
+#include "utils.hpp"
+#include "strings.hpp"
+#include "streams.hpp"
+#include "meta.hpp"

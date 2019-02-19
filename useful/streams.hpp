@@ -26,12 +26,12 @@ namespace uf::streams
                 ++col_;
         }
 
-        void inc_col() noexcept
+        void icol() noexcept
         {
             ++col_;
         }
 
-        void inc_line() noexcept
+        void iline() noexcept
         {
             ++line_;
         }
@@ -192,43 +192,35 @@ namespace uf
 {
     inline namespace operators
     {
-        inline namespace streams_operators
+        inline namespace io_operators
         {
-            inline namespace input
+            template<typename... StreamArgs, typename... Ts>
+            auto& operator>>(std::basic_istream<StreamArgs...>& stream, std::tuple<Ts...>& t)
             {
-                template<typename... StreamArgs, typename... Ts>
-                auto& operator>>(std::basic_istream<StreamArgs...>& stream, std::tuple<Ts...>& t)
-                {
-                    utils::tuple_for_each(t, [&stream](auto& e){ stream >> e; });
-                    return stream;
-                }
-
-                template<typename... StreamArgs, typename F, typename S>
-                auto& operator>>(std::basic_istream<StreamArgs...>& stream, std::pair<F, S>& p)
-                {
-                    return stream >> p.first >> p.second;
-                }
+                utils::tuple_for_each(t, [&stream](auto& e){ stream >> e; });
+                return stream;
             }
-            // namespace input
 
-            inline namespace output
+            template<typename... StreamArgs, typename F, typename S>
+            auto& operator>>(std::basic_istream<StreamArgs...>& stream, std::pair<F, S>& p)
             {
-                template<typename... StreamArgs, typename... Ts>
-                auto& operator<<(std::basic_ostream<StreamArgs...>& stream, const std::tuple<Ts...>& t)
-                {
-                    utils::tuple_for_each<sizeof...(Ts) - 1>(t, [&stream](const auto& e){ stream << e << " "; });
-                    return stream << std::get<sizeof...(Ts) - 1>(t);
-                }
-
-                template<typename... StreamArgs, class F, class S>
-                auto& operator<<(std::basic_ostream<StreamArgs...>& stream, const std::pair<F, S>& p)
-                {
-                    return stream << p.first << " " << p.second;
-                }
+                return stream >> p.first >> p.second;
             }
-            // namespace output
+
+            template<typename... StreamArgs, typename... Ts>
+            auto& operator<<(std::basic_ostream<StreamArgs...>& stream, const std::tuple<Ts...>& t)
+            {
+                utils::tuple_for_each<sizeof...(Ts) - 1>(t, [&stream](const auto& e){ stream << e << " "; });
+                return stream << std::get<sizeof...(Ts) - 1>(t);
+            }
+
+            template<typename... StreamArgs, class F, class S>
+            auto& operator<<(std::basic_ostream<StreamArgs...>& stream, const std::pair<F, S>& p)
+            {
+                return stream << p.first << " " << p.second;
+            }
         }
-        // namespace streams
+        // namespace io_operators
     }
     // namespace operators
 }

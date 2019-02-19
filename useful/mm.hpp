@@ -21,7 +21,7 @@ namespace uf::utils
         }
         */
 
-        template<bool Minimum, typename Result, typename... Ts, meta::disable_if_t<meta::is_same_all_v<std::decay_t<Ts>...>, int> = 0>
+        template<bool Minimum, typename Result, typename... Ts, mt::disable_if_t<mt::is_same_all_v<std::decay_t<Ts>...>, int> = 0>
         constexpr Result mm_helper(Ts&&... args)
         {
             static_assert(std::is_same_v<Result, std::decay_t<Result>>);
@@ -66,7 +66,7 @@ namespace uf::utils
             }
         }
 
-        template<bool Minimum, typename Result, typename... Ts, std::enable_if_t<meta::is_same_all_v<std::decay_t<Ts>...>, int> = 0>
+        template<bool Minimum, typename Result, typename... Ts, std::enable_if_t<mt::is_same_all_v<std::decay_t<Ts>...>, int> = 0>
         constexpr Result mm_helper(Ts&&... args)
         {
             static_assert(std::is_same_v<Result, std::decay_t<Result>>);
@@ -76,7 +76,7 @@ namespace uf::utils
         template<bool Minimum, typename First, typename... Ts>
         constexpr auto& mm_ref_helper(First& first, Ts&... args)
         {
-            static_assert(std::is_same_v<std::decay_t<First>, std::decay_t<meta::first_t<Ts...>>>);
+            static_assert(std::is_same_v<std::decay_t<First>, std::decay_t<mt::first_t<Ts...>>>);
             using result_type = std::conditional_t<(std::is_const_v<Ts> || ...) || std::is_const_v<First>, const First, First>;
 
             result_type* m = &first;
@@ -98,7 +98,7 @@ namespace uf::utils
     template<typename... Ts>
     constexpr auto min(Ts&&... args)
     {
-        return detail::mm_helper<true, std::decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+        return detail::mm_helper<true, std::decay_t<mt::first_t<Ts...>>>(std::forward<Ts>(args)...);
     }
 
     template<typename... Ts>
@@ -116,7 +116,7 @@ namespace uf::utils
     template<typename... Ts>
     constexpr auto max(Ts&&... args)
     {
-        return detail::mm_helper<false, std::decay_t<meta::first_t<Ts...>>>(std::forward<Ts>(args)...);
+        return detail::mm_helper<false, std::decay_t<mt::first_t<Ts...>>>(std::forward<Ts>(args)...);
     }
 
     template<typename... Ts>

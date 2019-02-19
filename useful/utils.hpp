@@ -7,7 +7,7 @@
 #pragma once
 #include "meta.hpp"
 
-namespace uf::utils
+namespace uf::ls
 {
     template<class E, class... Ps>
     constexpr bool satisfies_one(const E& e, Ps&&... ps);
@@ -32,7 +32,7 @@ namespace uf::utils
         template<bool ByKey, typename E, class... Rs>
         constexpr bool remove_assoc_element_check(const E& e, Rs&&... rs)
         {
-            if constexpr (meta::is_pair_v<E>)
+            if constexpr (mt::is_pair_v<E>)
             {
                 if constexpr (ByKey)
                     return satisfies_one(e.first, rs...);
@@ -100,7 +100,7 @@ namespace uf::utils
     auto add_positions(SeqContainer&& container)
     {
         using value_type = typename std::remove_reference_t<SeqContainer>::value_type;
-        using result_type = typename meta::clean<std::remove_reference_t<SeqContainer>>::template type<std::pair<u64, value_type>>;
+        using result_type = typename mt::clean<std::remove_reference_t<SeqContainer>>::template type<std::pair<u64, value_type>>;
 
         u64 j = 0;
         result_type result;

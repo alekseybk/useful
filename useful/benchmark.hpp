@@ -22,7 +22,7 @@
 
 #endif
 
-namespace uf::bench
+namespace uf::bm
 {
     template<class Meter, typename F, typename... Args>
     double benchmark(F&& f, Args&&... args)
@@ -139,7 +139,7 @@ namespace uf::bench
 #endif
 
 }
-// namespace uf::bench
+// namespace uf::bm
 
 
 
