@@ -7,7 +7,7 @@
 #pragma once
 #include "utils.hpp"
 
-namespace uf::strings
+namespace uf
 {
     namespace detail
     {
@@ -29,18 +29,16 @@ namespace uf::strings
     }
     // namespace detail
 
-    template<class String>
-    void lowercase(String& s)
+    void lowercase(std::string& s)
     {
-        for (auto& c : s)
+        for (char& c : s)
             if (c >= 'A' && c <= 'Z')
                 c += 'a' - 'A';
     }
 
-    template<class String>
-    void uppercase(String& s)
+    void uppercase(std::string& s)
     {
-        for (auto& c : s)
+        for (char& c : s)
             if (c >= 'a' && c <= 'z')
                 c -= 'a' - 'A';
     }
@@ -79,7 +77,7 @@ namespace uf::strings
         std::vector<std::pair<iter, iter>> result;
         for (auto i = c.begin(); i != c.end(); ++i)
         {
-            if (ls::satisfies_one(*i, ds...))
+            if (satisfies_one(*i, ds...))
             {
                 if (empty_seq)
                     continue;
@@ -133,9 +131,11 @@ namespace uf::strings
         iter next_item_begin = c.begin();
         for (auto i = c.begin(); i != c.end(); ++i)
         {
-            if (utils::satisfies_one(*i, ds...))
+            if (satisfies_one(*i, ds...))
             {
                 result.push_back({next_item_begin, i});
+                if (result.size() == n)
+                    return result;
                 next_item_begin = i + 1;
             }
         }
@@ -167,7 +167,7 @@ namespace uf::strings
         return detail::build_split_tuple<SeqContainer>(split_strong_itr(c, ds...), std::make_index_sequence<N>());
     }
 
-    template<class SeqContainer1, class SeqContainer2, std::enable_if_t<mt::is_iterable_v<std::decay_t<SeqContainer2>>, int> = 0>
+    template<class SeqContainer1, class SeqContainer2, enif<mt::is_iterable_v<std::decay_t<SeqContainer2>>> = sdef>
     bool starts_with(const SeqContainer1& c, const SeqContainer2& pattern)
     {
         if (pattern.size() > c.size())
@@ -178,13 +178,13 @@ namespace uf::strings
         return true;
     }
 
-    template<class SeqContainer1, class First, mt::disable_if_t<mt::is_iterable_v<std::decay_t<First>>, int> = 0>
+    template<class SeqContainer1, class First, disif<mt::is_iterable_v<std::decay_t<First>>> = sdef>
     bool starts_with(const SeqContainer1& c, const First& first)
     {
         return !c.empty() && *c.begin() == first;
     }
 
-    template<class SeqContainer1, class SeqContainer2, std::enable_if_t<mt::is_iterable_v<std::decay_t<SeqContainer2>>, int> = 0>
+    template<class SeqContainer1, class SeqContainer2, enif<mt::is_iterable_v<std::decay_t<SeqContainer2>>> = sdef>
     bool ends_with(const SeqContainer1& c, const SeqContainer2& pattern)
     {
         if (pattern.size() > c.size())
@@ -195,10 +195,40 @@ namespace uf::strings
         return true;
     }
 
-    template<class SeqContainer1, class First, mt::disable_if_t<mt::is_iterable_v<std::decay_t<First>>, int> = 0>
+    template<class SeqContainer1, class First, disif<mt::is_iterable_v<std::decay_t<First>>> = sdef>
     bool ends_with(const SeqContainer1& c, const First& first)
     {
         return !c.empty() && *c.rbegin() == first;
+    }
+
+    template<typename Tp, enif<std::is_floating_point_v<Tp>> = sdef>
+    Tp from_string(const std::string& s)
+    {
+        return std::stold(s);
+    }
+
+    template<typename Tp, enif<std::is_integral_v<Tp> && std::is_signed_v<Tp>> = sdef>
+    Tp from_string(const std::string& s)
+    {
+        return std::stoll(s);
+    }
+
+    template<typename Tp, enif<std::is_integral_v<Tp> && std::is_unsigned_v<Tp>> = sdef>
+    Tp from_string(const std::string& s)
+    {
+        return std::stoull(s);
+    }
+
+    template<typename Tp, typename Str, enif<std::is_same_v<Tp, std::string>> = sdef>
+    Tp from_string(Str&& s)
+    {
+        return std::forward<Str>(s);
+    }
+
+    template<typename Tp>
+    void from_string(const std::string& s, Tp& v)
+    {
+        v = from_string<Tp>(s);
     }
 }
 // namespace uf

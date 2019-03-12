@@ -5,7 +5,10 @@
 */
 
 #pragma once
-#include "utils.hpp"
+#include <chrono>
+#include <functional>
+
+#include "base.hpp"
 
 #ifdef __linux
 
@@ -16,36 +19,27 @@
 
 #include <windows.h>
 
-#else
-
-#error "Unknown OS"
-
 #endif
 
-namespace uf::bm
+namespace uf
 {
-    template<class Meter, typename F, typename... Args>
-    double benchmark(F&& f, Args&&... args)
-    {
-        const Meter tm;
-        std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
-        return tm.seconds();
-    }
-
     template<typename TimePoint>
-    class basic_time_meter
+    class time_meter
     {
-        std::function<TimePoint()> get_now_;
-        std::function<double(TimePoint, TimePoint)> get_sec_;
+    public:
+        using time_point = TimePoint;
 
-        TimePoint begin_;
-        TimePoint stop_;
+    private:
+        std::function<time_point()> get_now_;
+        std::function<double(time_point, time_point)> get_sec_;
+
+        time_point begin_;
+        time_point stop_;
         bool stopped_;
 
     public:
         template<typename GetNow, typename GetSec>
-        basic_time_meter(GetNow&& gn, GetSec&& gs) : get_now_(std::forward<GetNow>(gn)), get_sec_(std::forward<GetSec>(gs)),
-                                                     begin_(get_now_()), stopped_(false) { }
+        time_meter(GetNow&& get_now, GetSec&& get_sec) : get_now_(std::forward<GetNow>(get_now)), get_sec_(std::forward<GetSec>(get_sec)), begin_(get_now_()), stopped_(false) { }
 
         double seconds() const
         {
@@ -54,22 +48,18 @@ namespace uf::bm
             return get_sec_(begin_, get_now_());
         }
 
-        double restart()
+        void restart()
         {
-            const TimePoint now = get_now_();
-            double result = seconds(now);
             stopped_ = false;
-            begin_ = now;
-            return result;
+            begin_ = get_now_();
         }
 
-        double stop()
+        void stop()
         {
             if (stopped_)
-                return seconds();
+                return;
             stop_ = get_now_();
             stopped_ = true;
-            return seconds(stop_);
         }
 
         void start()
@@ -80,57 +70,48 @@ namespace uf::bm
             begin_ += get_now_() - stop_;
         }
 
-        bool stopped() const
+        template<typename F, typename... Args>
+        double benchmark(F&& f, Args&&... args)
         {
-            return stopped_;
-        }
-
-    private:
-        double seconds(TimePoint now) const
-        {
-            if (stopped_)
-                return get_sec_(begin_, stop_);
-            return get_sec_(begin_, now);
+            restart();
+            std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            return seconds();
         }
     };
 
-    class time_meter : public basic_time_meter<std::chrono::high_resolution_clock::time_point>
+    auto create_tm()
     {
-    public:
-        using time_point = std::chrono::high_resolution_clock::time_point;
+        using tm_type = time_meter<std::chrono::high_resolution_clock::time_point>;
 
-        time_meter() : basic_time_meter<time_point>(std::chrono::high_resolution_clock::now, get_seconds) { }
-
-    private:
-        static double get_seconds(time_point p1, time_point p2)
+        static const auto get_sec = [](tm_type::time_point p1, tm_type::time_point p2)
         {
             return static_cast<double>((p2 - p1).count()) / std::chrono::high_resolution_clock::period::den;
-        }
-    };
+        };
+
+        return tm_type(std::chrono::high_resolution_clock::now, get_sec);
+    }
 
 #ifdef __linux__
 
-    class proc_time_meter : public basic_time_meter<i64>
+    auto create_ptm()
     {
-    public:
-        using time_point = i64;
+        using tm_type = time_meter<i64>;
 
-        proc_time_meter() : basic_time_meter<time_point>(get_now, get_seconds) { }
-
-    private:
-        static double get_seconds(time_point p1, time_point p2)
-        {
-            static const auto per_second = sysconf(_SC_CLK_TCK);
-            return static_cast<double>(p2 - p1) / per_second;
-        }
-
-        static time_point get_now()
+        static const auto get_now = []()
         {
             tms result;
             times(&result);
             return result.tms_stime + result.tms_utime;
-        }
-    };
+        };
+
+        static const auto get_sec = [](tm_type::time_point p1, tm_type::time_point p2)
+        {
+            static const auto per_second = sysconf(_SC_CLK_TCK);
+            return static_cast<double>(p2 - p1) / per_second;
+        };
+
+        return tm_type(get_now, get_sec);
+    }
 
 #elif _WIN32
 
@@ -139,7 +120,7 @@ namespace uf::bm
 #endif
 
 }
-// namespace uf::bm
+// namespace uf
 
 
 

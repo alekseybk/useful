@@ -7,212 +7,288 @@
 #pragma once
 #include "meta.hpp"
 
-namespace uf::ls
+namespace uf
 {
-    template<class E, class... Ps>
-    constexpr bool satisfies_one(const E& e, Ps&&... ps);
-
     namespace detail
     {
-        template<typename E, typename P>
-        bool satisfies_helper(const E& e, P&& p)
+        template<typename Tp, u64... Ns>
+        constexpr auto tuple_clone_value_helper(Tp&& value, std::index_sequence<Ns...>)
         {
-            if constexpr (std::is_invocable_v<std::remove_reference_t<P>, const E&>)
-                return std::invoke(std::forward<P>(p), e);
+            return std::make_tuple(mt::clone_ref<Ns>(value)...);
+        }
+
+        template<typename T, typename F, u64... Ns>
+        constexpr void tuple_for_each_helper(T&& t, F&& f, std::index_sequence<Ns...>)
+        {
+            (std::invoke(f, std::get<Ns>(std::forward<T>(t))), ...);
+        }
+
+        template<u64 N, u64... Ns, typename Tp, typename F>
+        constexpr auto tuple_transform_only_helper2(Tp&& value, F&& f)
+        {
+            if constexpr (((N == Ns) || ...))
+                return std::invoke(f, std::forward<Tp>(value));
             else
-                return e == std::forward<P>(p);
+                return u8(0);
         }
 
-        template<typename Tuple, typename F, u64... Ns>
-        constexpr void tuple_for_each_helper(Tuple&& t, F&& f, std::index_sequence<Ns...>)
+        template<u64 N, u64... Ns, typename Tp, typename F>
+        constexpr auto tuple_transform_exclude_helper2(Tp&& value, F&& f)
         {
-            (std::invoke(std::forward<F>(f), std::get<Ns>(std::forward<Tuple>(t))), ...);
-        }
-
-        template<bool ByKey, typename E, class... Rs>
-        constexpr bool remove_assoc_element_check(const E& e, Rs&&... rs)
-        {
-            if constexpr (mt::is_pair_v<E>)
-            {
-                if constexpr (ByKey)
-                    return satisfies_one(e.first, rs...);
-                else
-                    return satisfies_one(e.second, rs...);
-            }
+            if constexpr (((N != Ns) && ...))
+                return std::invoke(f, std::forward<Tp>(value));
             else
-                return satisfies_one(e, rs...);
+                return u8(0);
         }
 
-        template<bool ByKey, class AssocContainer, class... Rs>
-        void remove_assoc_helper(AssocContainer& c, Rs&&... rs)
+        template<typename T, typename F, u64... SArgs>
+        constexpr auto tuple_transform_helper(T&& t, F&& f, std::index_sequence<SArgs...>)
         {
-            for (auto i = c.cbegin(); i != c.cend();)
-            {
-                if (detail::remove_assoc_element_check<ByKey>(*i, rs...))
-                    i = c.erase(i);
-                else
-                    ++i;
-            }
+            return std::make_tuple(std::invoke(f, std::get<SArgs>(std::forward<T>(t)))...);
         }
 
-        template<bool ByKey, class AssocContainer, class... Rs>
-        AssocContainer remove_assoc_copy_helper(const AssocContainer& c, Rs&&... rs)
+        template<typename T, typename F, u64... SArgs, u64... Ns>
+        constexpr auto tuple_transform_only_helper(T&& t, F&& f, std::index_sequence<SArgs...>, std::index_sequence<Ns...>)
         {
-            AssocContainer result;
-            for (auto i = c.cbegin(); i != c.cend(); ++i)
-                if (!detail::remove_assoc_element_check<ByKey>(*i, rs...))
-                    result.insert(*i);
-            return result;
+            return std::make_tuple(tuple_transform_only_helper2<SArgs, Ns...>(std::get<SArgs>(t), f)...);
+        }
+
+        template<typename T, typename F, u64... SArgs, u64... Ns>
+        constexpr auto tuple_transform_exclude_helper(T&& t, F&& f, std::index_sequence<SArgs...>, std::index_sequence<Ns...>)
+        {
+            return std::make_tuple(tuple_transform_exclude_helper2<SArgs, Ns...>(std::get<SArgs>(t), f)...);
         }
 
         template<typename Index, typename Tp, class F>
-        std::pair<bool, Index> binary_search_impl(Index left, Index right, Tp&& value, F&& f)
+        Index binary_search_impl(Index left, Index right, Index end, Tp&& value, F&& f)
         {
-            const Index middle = left + (right - left) / 2;
-            if (right - middle <= 1)
+            const auto diff = right - left;
+            if (diff <= 1)
             {
                 if (f(right) == value)
-                    return {false, right};
+                    return right;
                 if (f(left) == value)
-                    return {false, left};
-                return {true, left};
+                    return left;
+                return end;
             }
+            const Index middle = left + diff / 2;
             if (f(middle) < value)
-                return binary_search_impl(middle, right, std::forward<Tp>(value), std::forward<F>(f));
-            return binary_search_impl(left, middle, std::forward<Tp>(value), std::forward<F>(f));
+                return binary_search_impl(middle, right, end, std::forward<Tp>(value), std::forward<F>(f));
+            return binary_search_impl(left, middle, end, std::forward<Tp>(value), std::forward<F>(f));
         }
     }
     // namespace detail
 
-    template<typename Owner, typename E, std::enable_if_t<std::is_lvalue_reference_v<Owner>, int> = 0>
+    template<typename Owner, typename E, enif<std::is_lvalue_reference_v<Owner>> = sdef>
     constexpr auto&& forward_element(E&& e)
     {
         return std::forward<E>(e);
     }
 
-    template<typename Owner, typename E, std::enable_if_t<std::is_rvalue_reference_v<Owner> || !std::is_reference_v<Owner>, int> = 0>
+    template<typename Owner, typename E, enif<!std::is_reference_v<Owner>> = sdef>
     constexpr auto&& forward_element(E&& e)
     {
         return std::move(e);
     }
 
-    template<class SeqContainer>
-    auto add_positions(SeqContainer&& container)
+    template<typename E, typename P>
+    constexpr bool stf(const E& e, P&& p)
     {
-        using value_type = typename std::remove_reference_t<SeqContainer>::value_type;
-        using result_type = typename mt::clean<std::remove_reference_t<SeqContainer>>::template type<std::pair<u64, value_type>>;
+        if constexpr (std::is_invocable_v<std::remove_reference_t<P>, const E&>)
+            return std::invoke(p, e);
+        else
+            return e == p;
+    }
 
+    template<class E, class... Ps>
+    constexpr bool stf_one(const E& e, Ps&&... ps)
+    {
+        return (stf(e, ps) || ...);
+    }
+
+    template<class E, class... Ps>
+    constexpr bool stf_all(const E& e, Ps&&... ps)
+    {
+        return (stf(e, ps) && ...);
+    }
+
+    template<class... Ps>
+    constexpr auto stf_one_obj(Ps&&... ps)
+    {
+        return std::bind([](const auto& e, Ps&... ps){ return stf_one(e, ps...); }, std::placeholders::_1, std::forward<Ps>(ps)...);
+    }
+
+    template<class... Ps>
+    constexpr auto stf_all_obj(Ps&&... ps)
+    {
+        return std::bind([](const auto& e, Ps&... ps){ return stf_all(e, ps...); }, std::placeholders::_1, std::forward<Ps>(ps)...);
+    }
+
+    template<u64 N, typename Tp>
+    constexpr auto tuple_clone_value(Tp&& value)
+    {
+        return detail::tuple_clone_value_helper(std::forward<Tp>(value), std::make_index_sequence<N>());
+    }
+
+    template<typename T, typename F>
+    constexpr void tuple_for_each(T&& t, F&& f)
+    {
+        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>());
+    }
+
+    template<u64... Ns, typename T, typename F>
+    constexpr void tuple_for_each_only(T&& t, F&& f)
+    {
+        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), std::index_sequence<Ns...>());
+    }
+
+    template<u64... Ns, typename T, typename F>
+    constexpr void tuple_for_each_exclude(T&& t, F&& f)
+    {
+        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), mt::seq_remove_t<std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), Ns...>());
+    }
+
+    template<typename T, typename F>
+    constexpr auto tuple_transform(T&& t, F&& f)
+    {
+        return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>());
+    }
+
+    template<u64... Ns, typename T, typename F>
+    constexpr auto tuple_transform_only(T&& t, F&& f)
+    {
+        if constexpr (sizeof...(Ns))
+            return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), std::index_sequence<Ns...>());
+        else
+            return tuple_clone_value<std::tuple_size_v<std::remove_reference_t<T>>>(u8(0));
+    }
+
+    template<u64... Ns, typename T, typename F>
+    constexpr auto tuple_transform_exclude(T&& t, F&& f)
+    {
+        if constexpr (sizeof...(Ns))
+            return tuple_transform_exclude_helper(std::forward<T>(t), std::forward<F>(f), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), std::index_sequence<Ns...>());
+        else
+            return tuple_transform(std::forward<T>(t), std::forward<F>(f));
+    }
+
+    template<class R, class SeqContainer>
+    R add_positions(SeqContainer&& x)
+    {
+        R result;
         u64 j = 0;
-        result_type result;
-        for (auto i = container.begin(); i != container.end(); ++i, ++j)
-            result.push_back({j, utils::forward_element<SeqContainer>(*i)});
+        for (auto i = x.begin(); i != x.end(); ++i, ++j)
+            result.push_back(std::make_pair(j, forward_element<SeqContainer>(*i)));
         return result;
     }
 
-    template<class SeqContainer, class Compare>
-    auto sort_save_position(SeqContainer&& container, const Compare& comp)
+    template<class SeqContainer>
+    auto add_positions(SeqContainer&& x)
     {
-        auto pairs = add_positions(std::forward<SeqContainer>(container));
-        sort(pairs.begin(), pairs.end(), [&comp](const auto& a, const auto& b)
-        {
-            return comp(a.second, b.second);
-        });
-        return pairs;
+        using decayed = std::decay_t<SeqContainer>;
+        using value_type = typename decayed::value_type;
+        using result_type = typename mt::clean<decayed>::template type<std::pair<u64, value_type>>;
+        return add_positions<result_type>(x);
     }
 
-    template<class E, class... Ps>
-    constexpr bool satisfies_one(const E& e, Ps&&... ps)
+    template<typename Tp, typename C, typename F>
+    void for_each_trg(C&& c, F&& f)
     {
-        return (detail::satisfies_helper(e, std::forward<Ps>(ps)) || ...);
-    }
+        using value_type = typename std::decay_t<C>::value_type;
 
-    template<class E, class... Ps>
-    bool satisfies_all(const E& e, Ps&&... ps)
-    {
-        return (detail::satisfies_helper(e, std::forward<Ps>(ps)) && ...);
-    }
-
-    template<u64... Ns, typename Tuple, typename F, typename = std::enable_if_t<(sizeof...(Ns) > 1)>>
-    constexpr void tuple_for_each(Tuple&& t, F&& f)
-    {
-        detail::tuple_for_each_helper(std::forward<Tuple>(t), std::forward<F>(f), std::index_sequence<Ns...>());
-    }
-
-    template<u64 N, typename Tuple, typename F>
-    constexpr void tuple_for_each(Tuple&& t, F&& f)
-    {
-        detail::tuple_for_each_helper(std::forward<Tuple>(t), std::forward<F>(f), std::make_index_sequence<N>());
-    }
-
-    template<typename Tuple, typename F>
-    constexpr void tuple_for_each(Tuple&& t, F&& f)
-    {
-        tuple_for_each<std::tuple_size_v<std::remove_reference_t<Tuple>>>(std::forward<Tuple>(t), std::forward<F>(f));
-    }
-
-    template<typename Target, typename Container, typename F>
-    void targeted_for_each(Container&& c, F&& f)
-    {
-        using value_type = std::decay_t<typename std::remove_reference_t<Container>::value_type>;
-
-        if constexpr (std::is_same_v<std::decay_t<Target>, value_type>)
+        if constexpr (std::is_same_v<Tp, value_type>)
             std::for_each(c.begin(), c.end(), f);
         else
             for (auto& value : c)
-                targeted_for_each<Target>(forward_element<Container>(value), f);
+                for_each_trg<Tp>(forward_element<C>(value), f);
+    }
+
+    template<typename P>
+    auto stf_first_obj(P&& p)
+    {
+        return [p = std::forward<P>(p)](const auto& x) mutable -> bool { return stf(x.first, p); };
+    }
+
+    template<typename P>
+    auto stf_second_obj(P&& p)
+    {
+        return [p = std::forward<P>(p)](const auto& x) mutable -> bool { return stf(x.second, p); };
+    }
+
+    template<u64 N, typename P>
+    auto stf_nth_obj(P&& p)
+    {
+        return [p = std::forward<P>(p)](const auto& x) mutable -> bool { return stf(std::get<N>(x), p); };
     }
 
     template<class AssocContainer, class... Rs>
-    void remove_assoc_key(AssocContainer& c, Rs&&... rs)
+    void remove_associative(AssocContainer& c, Rs&&... rs)
     {
-        detail::remove_assoc_helper<true>(c, rs...);
+        for (auto i = c.cbegin(); i != c.cend();)
+        {
+            if (stf_one(*i, rs...))
+                i = c.erase(i);
+            else
+                ++i;
+        }
     }
 
     template<class AssocContainer, class... Rs>
-    void remove_assoc_value(AssocContainer& c, Rs&&... rs)
+    AssocContainer remove_associative_copy(const AssocContainer& c, Rs&&... rs)
     {
-        detail::remove_assoc_helper<false>(c, rs...);
-    }
-
-    template<class AssocContainer, class... Rs>
-    AssocContainer remove_assoc_copy_key(const AssocContainer& c, Rs&&... rs)
-    {
-        return detail::remove_assoc_copy_helper<true>(c, rs...);
-    }
-
-    template<class AssocContainer, class... Rs>
-    AssocContainer remove_assoc_copy_value(const AssocContainer& c, Rs&&... rs)
-    {
-        return detail::remove_assoc_copy_helper<false>(c, rs...);
-    }
-
-    template<class SeqContainer, typename... Rs>
-    void remove_seq(SeqContainer& c, Rs&&... rs)
-    {
-        auto cur_end = c.begin();
-        for (auto& e : c)
-            if (!satisfies_one(e, rs...))
-                *cur_end++ = std::move(e);
-        c.erase(cur_end, c.end());
-    }
-
-    template<class SeqContainer, typename... Rs>
-    SeqContainer remove_seq_copy(const SeqContainer& c, Rs&&... rs)
-    {
-        SeqContainer result;
-        for (const auto& e : c)
-            if (!satisfies_one(e, rs...))
-                result.push_back(e);
+        AssocContainer result;
+        for (auto i = c.cbegin(); i != c.cend(); ++i)
+            if (!stf_one(*i, rs...))
+                result.insert(*i);
         return result;
     }
 
     template<typename Index, typename Tp, class F>
-    std::pair<bool, Index> binary_search(Index left, Index right, Tp&& value, F&& f)
+    Index binary_search(Index left, Index right, Tp&& value, F&& f)
     {
         if (left >= right)
-            return {true, left};
-        return detail::binary_search_impl(left, --right, value, f);
+            return right;
+        return detail::binary_search_impl(left, right - 1, right, value, std::forward<F>(f));
     }
+
+    template<typename Tp>
+    class ptr_and_size
+    {
+    public:
+        using element_type = Tp;
+
+    private:
+        element_type* ptr_;
+        u64 size_;
+
+    public:
+        ptr_and_size(element_type* ptr, u64 size) : ptr_(ptr), size_(size) { }
+
+        element_type& operator[](u64 i) const noexcept
+        {
+            return ptr_[i];
+        }
+
+        element_type& at(u64 i) const
+        {
+            if (i >= size_)
+                throw std::out_of_range("ptr_and_size: Out of range");
+            return ptr_[i];
+        }
+
+        element_type* ptr() const noexcept
+        {
+            return ptr_;
+        }
+
+        u64 size() const noexcept
+        {
+            return size_;
+        }
+    };
+
+    template<typename Tp>
+    ptr_and_size(Tp*, u64) -> ptr_and_size<Tp>;
 
     class spinlock
     {
@@ -224,16 +300,17 @@ namespace uf::ls
             return !flag_.test_and_set(std::memory_order_acquire);
         }
 
-        template<typename Period = std::micro>
-        void lock(i64 interval = 0)
+        template<typename Period, i64 Count>
+        void lock()
         {
             while (flag_.test_and_set(std::memory_order_acquire))
-            {
-                if (interval)
-                    std::this_thread::sleep_for(std::chrono::duration<i64, Period>(interval));
-                else
-                    std::this_thread::yield();
-            }
+                std::this_thread::sleep_for(std::chrono::duration<i64, Period>(Count));
+        }
+
+        void lock()
+        {
+            while (flag_.test_and_set(std::memory_order_acquire))
+                std::this_thread::yield();
         }
 
         void unlock()
@@ -241,125 +318,5 @@ namespace uf::ls
             flag_.clear(std::memory_order_release);
         }
     };
-
-    template<typename Tp, std::enable_if_t<std::is_floating_point_v<Tp>>>
-    Tp from_string(const std::string& s)
-    {
-        return std::stold(s);
-    }
-
-    template<typename Tp, std::enable_if_t<std::is_integral_v<Tp> && std::is_signed_v<Tp>>>
-    Tp from_string(const std::string& s)
-    {
-        return std::stoll(s);
-    }
-
-    template<typename Tp, std::enable_if_t<std::is_integral_v<Tp> && std::is_unsigned_v<Tp>>>
-    Tp from_string(const std::string& s)
-    {
-        return std::stoull(s);
-    }
-
-    template<typename Tp>
-    void from_string(const std::string& s, Tp& v)
-    {
-        v = from_string<Tp>(s);
-    }
-
-    template<class Tp>
-    class data_view
-    {
-        const Tp* ptr_;
-        u64 size_;
-
-    public:
-        template<typename Tp_>
-        data_view(Tp_* ptr, u64 size = std::numeric_limits<u64>::max()) : ptr_(reinterpret_cast<const Tp*>(ptr)), size_(size) { }
-
-        const Tp& operator[](u64 i) const noexcept
-        {
-            return ptr_[i];
-        }
-
-        const Tp& at(u64 i) const
-        {
-            if (i >= size_)
-                throw std::out_of_range("data_view: Out of range");
-            return ptr_[i];
-        }
-
-        u64 size() const noexcept
-        {
-            return size_;
-        }
-    };
-
-    template<typename Tp_>
-    data_view(Tp_*, u64) -> data_view<Tp_>;
-
-    template<class Compare>
-    class dereference_compare
-    {
-        const Compare comp_;
-
-    public:
-        template<class P1, class P2>
-        bool operator()(const P1& a, const P2& b) const
-        {
-            return comp_(*a, *b);
-        }
-    };
-
-    template<class Compare>
-    class basic_compare
-    {
-    protected:
-        const Compare comp_;
-
-    public:
-        basic_compare() = default;
-
-        template<class Compare_>
-        basic_compare(Compare_&& comp) : comp_(std::forward<Compare_>(comp)) { }
-    };
-
-    template<class Compare>
-    class first_compare : public basic_compare<Compare>
-    {
-    public:
-        using basic_compare<Compare>::basic_compare;
-
-        template<typename P1, typename P2>
-        bool operator()(const P1& a, const P2& b) const
-        {
-            return basic_compare<Compare>::comp_(a.first, b.first);
-        }
-    };
-
-    template<class Compare>
-    class second_compare : public basic_compare<Compare>
-    {
-    public:
-        using basic_compare<Compare>::basic_compare;
-
-        template<typename P1, typename P2>
-        bool operator()(const P1& a, const P2& b) const
-        {
-            return basic_compare<Compare>::comp_(a.second, b.second);
-        }
-    };
-
-    template<u64 N, class Compare>
-    class nth_compare : public basic_compare<Compare>
-    {
-    public:
-        using basic_compare<Compare>::basic_compare;
-
-        template<typename E1, typename E2>
-        bool operator()(const E1& a, const E2& b) const
-        {
-            return basic_compare<Compare>::comp_(std::get<N>(a), std::get<N>(b));
-        }
-    };
 }
-// namespace uf::utils
+// namespace uf

@@ -16,10 +16,10 @@ namespace test::mt
     TEST(function_trait)
     {
         struct X { int f(double, char); };
-        assert_eq(function_trait<decltype(&X::f)>::arity, 2);
-        assert_true((std::is_same_v<function_trait<decltype(&X::f)>::result, int>));
-        assert_true((std::is_same_v<function_trait<decltype(&X::f)>::arg<0>, double>));
-        assert_true((std::is_same_v<function_trait<decltype(&X::f)>::arg<1>, char>));
+        assert_eq(finfo<decltype(&X::f)>::arity, 2);
+        assert_true((std::is_same_v<finfo<decltype(&X::f)>::result, int>));
+        assert_true((std::is_same_v<finfo<decltype(&X::f)>::arg<0>, double>));
+        assert_true((std::is_same_v<finfo<decltype(&X::f)>::arg<1>, char>));
     }
 }
 // namespace uf::test::meta

@@ -7,122 +7,27 @@
 #pragma once
 #include "utils.hpp"
 
-namespace uf::streams
+namespace uf
 {
-    class text_file_pos
+    struct text_pos
     {
-        u64 line_ = 1;
-        u64 col_ = 1;
+        u64 line = 1;
+        u64 col = 1;
 
-    public:
         void inc(char c) noexcept
         {
             if (c == '\n')
             {
-                ++line_;
-                col_ = 1;
+                ++line;
+                col = 1;
             }
             else
-                ++col_;
-        }
-
-        void icol() noexcept
-        {
-            ++col_;
-        }
-
-        void iline() noexcept
-        {
-            ++line_;
-        }
-
-        u64 line() const noexcept
-        {
-            return line_;
-        }
-
-        u64 col() const noexcept
-        {
-            return col_;
+                ++col;
         }
     };
 
-    namespace detail
-    {
-        std::pair<std::string_view, std::string> csv_cell_escaped(std::string_view sv, text_file_pos& pos)
-        {
-            if (sv[0] != '\"')
-                throw std::runtime_error("Escaped csv cell must begin with \" at line = " + std::to_string(pos.line()) + " col = " + std::to_string(pos.col()));
-            pos.inc(sv[0]);
-            std::string result;
-            for (u64 i = 1; i < sv.size(); ++i)
-            {
-                pos.inc(sv[i]);
-                if (sv[i] == '\"')
-                {
-                    if (i != sv.size() - 1 && sv[i + 1] == '\"')
-                    {
-                        ++i;
-                        pos.inc(sv[i + 1]);
-                        result.push_back('\"');
-                    }
-                    else
-                        return {std::string_view(sv.data() + i + 1, sv.size() - i - 1), std::move(result)};
-                }
-                else
-                    result.push_back(sv[i]);
-            }
-            throw std::runtime_error("Escaped csv cell must ends with \" at line = " + std::to_string(pos.line()) + " col = " + std::to_string(pos.col()));
-        }
-
-        std::pair<std::string_view, std::string> csv_cell_non_escaped(std::string_view sv, text_file_pos& pos)
-        {
-            u64 i = 0;
-            for (; i < sv.size(); ++i)
-            {
-                if (sv[i] == ',' || sv[i] == '\n' || sv[i] == '\r')
-                    break;
-                pos.inc(sv[i]);
-            }
-            return {std::string_view(sv.data() + i, sv.size() - i), std::string(sv.begin(), sv.begin() + i)};
-        }
-
-        std::pair<std::string_view, std::vector<std::string>> csv_record(std::string_view sv, text_file_pos& pos)
-        {
-            std::vector<std::string> result;
-            while (true)
-            {
-                std::pair<std::string_view, std::string> cell_out;
-                if (sv[0] == '\"')
-                    cell_out = csv_cell_escaped(sv, pos);
-                else
-                    cell_out = csv_cell_non_escaped(sv, pos);
-                sv = cell_out.first;
-                result.push_back(std::move(cell_out.second));
-
-                if (!sv.size())
-                    return {std::string_view(), std::move(result)};
-                pos.inc(sv[0]);
-                switch (sv[0])
-                {
-                    case '\n':
-                        return {std::string_view(sv.data() + 1, sv.size() - 1), std::move(result)};
-                    case ',':
-                        sv = std::string_view(sv.data() + 1, sv.size() - 1);
-                        continue;
-                    case '\r':
-                        if (!sv.size() || sv[1] != '\n')
-                            throw std::runtime_error("Expected \\n after \\r at line = " + std::to_string(pos.line()) + " col = " + std::to_string(pos.col()));
-                        pos.inc(sv[1]);
-                        return {std::string_view(sv.data() + 2, sv.size() - 2), std::move(result)};
-                }
-            }
-        }
-    }
-    // namespace detail
-
     template<class InputStream>
-    u64 stream_bytes_remaining(InputStream&& stream)
+    u64 bytes_remaining(InputStream&& stream)
     {
         const u64 cur_pos = stream.tellg();
         stream.seekg(0, stream.end);
@@ -132,96 +37,58 @@ namespace uf::streams
     }
 
     template<typename Tp, class InputStream>
-    auto read_stream_to_vec(InputStream&& stream, u64 bytes = std::numeric_limits<u64>::max())
+    void read_unf_val(InputStream&& stream, Tp& value)
     {
-        const u64 size = stream_bytes_remaining(stream);
-        if (size < bytes)
-            bytes = size;
-        const u64 rem = bytes % sizeof(Tp);
-        bytes -= rem;
-        std::vector<Tp> result(bytes / sizeof(Tp));
-        stream.read(reinterpret_cast<char*>(result.data()), bytes);
-        if constexpr (sizeof(Tp) > 1)
-            return std::pair(rem, std::move(result));
-        else
-            return result;
+        stream.read(reinterpret_cast<char*>(&value), sizeof(Tp));
     }
 
-    template<class InputStream>
-    std::string read_stream_to_str(InputStream&& stream, u64 bytes = std::numeric_limits<u64>::max())
+    template<typename Tp, class InputStream>
+    Tp read_unf_val(InputStream&& stream)
     {
-        const u64 size = stream_bytes_remaining(stream);
-        if (size < bytes)
-            bytes = size;
-        std::string result;
-        result.resize(bytes);
-        stream.read(result.data(), bytes);
+        Tp result;
+        read_unf_val(stream, result);
         return result;
     }
 
-    // RFC 4180
     template<class InputStream>
-    std::vector<std::vector<std::string>> csv_raw(InputStream&& stream) noexcept(false)
+    u64 read_unf_data(InputStream&& stream, void* data, u64 bytes)
     {
-        std::string data = read_stream_to_str(stream);
+        stream.read(static_cast<char*>(data), bytes);
+        return stream.gcount();
+    }
 
-        std::string_view sv(data);
-        std::vector<std::vector<std::string>> result;
-        text_file_pos pos;
-        auto push_row = [&result, &sv, &pos]()
-        {
-            auto rec_res = detail::csv_record(sv, pos);
-            result.push_back(std::move(rec_res.second));
-            sv = rec_res.first;
-        };
-        push_row();
+    template<class InputStream, typename Tp>
+    u64 read_unf_data(InputStream&& stream, Tp* data, u64 count)
+    {
+        stream.read(reinterpret_cast<char*>(data), count * sizeof(Tp));
+        const u64 readed = stream.gcount();
+        const u64 remaining = readed % sizeof(Tp);
+        if (remaining)
+            throw std::runtime_error(std::string("Stream extra bytes = ") + std::to_string(remaining));
+        return readed / sizeof(Tp);
+    }
 
-        const u64 cols = result.back().size();
-        while (sv.size())
-        {
-            push_row();
-            if (result.back().size() != cols)
-                throw std::runtime_error("Invalid columns count at line = " + std::to_string(pos.line()));
-        }
+    template<class Container, class InputStream>
+    Container read_unf_container(InputStream&& stream, u64 count)
+    {
+        Container result;
+        result.resize(count);
+        const u64 readed = read_unf_data(stream, result.data(), count);
+        result.resize(readed);
+        result.shrink_to_fit();
         return result;
     }
-}
-// namespace uf::streams
 
-namespace uf
-{
-    inline namespace operators
+    template<typename Tp, class InputStream>
+    std::vector<Tp> read_unf_vec(InputStream&& stream, u64 count)
     {
-        inline namespace io_operators
-        {
-            template<typename... StreamArgs, typename... Ts>
-            auto& operator>>(std::basic_istream<StreamArgs...>& stream, std::tuple<Ts...>& t)
-            {
-                utils::tuple_for_each(t, [&stream](auto& e){ stream >> e; });
-                return stream;
-            }
-
-            template<typename... StreamArgs, typename F, typename S>
-            auto& operator>>(std::basic_istream<StreamArgs...>& stream, std::pair<F, S>& p)
-            {
-                return stream >> p.first >> p.second;
-            }
-
-            template<typename... StreamArgs, typename... Ts>
-            auto& operator<<(std::basic_ostream<StreamArgs...>& stream, const std::tuple<Ts...>& t)
-            {
-                utils::tuple_for_each<sizeof...(Ts) - 1>(t, [&stream](const auto& e){ stream << e << " "; });
-                return stream << std::get<sizeof...(Ts) - 1>(t);
-            }
-
-            template<typename... StreamArgs, class F, class S>
-            auto& operator<<(std::basic_ostream<StreamArgs...>& stream, const std::pair<F, S>& p)
-            {
-                return stream << p.first << " " << p.second;
-            }
-        }
-        // namespace io_operators
+        return read_unf_container<std::vector<Tp>>(stream, count);
     }
-    // namespace operators
+
+    template<typename Tp, class InputStream>
+    std::string read_unf_str(InputStream&& stream, u64 count)
+    {
+        return read_unf_container<std::string>(stream, count);
+    }
 }
 // namespace uf
