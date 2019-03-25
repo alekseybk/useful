@@ -36,6 +36,13 @@ namespace uf
         return result;
     }
 
+    template<class Tp, class InputStream>
+    std::pair<u64, u64> elements_remaining(InputStream&& stream)
+    {
+        const u64 bytes = bytes_remaining(std::forward<InputStream>(stream));
+        return {bytes % sizeof(Tp), bytes / sizeof(Tp)};
+    }
+
     template<typename Tp, class InputStream>
     void read_unf_val(InputStream&& stream, Tp& value)
     {
@@ -68,6 +75,12 @@ namespace uf
         return readed / sizeof(Tp);
     }
 
+    template<class InputStream, class SmartPtr, enif<mt::is_smart_pointer_v<SmartPtr>> = sdef>
+    u64 read_unf_data(InputStream&& stream, SmartPtr data, u64 count)
+    {
+        return read_unf_data(std::forward<InputStream>(stream), data.get(), count);
+    }
+
     template<class Container, class InputStream>
     Container read_unf_container(InputStream&& stream, u64 count)
     {
@@ -85,7 +98,7 @@ namespace uf
         return read_unf_container<std::vector<Tp>>(stream, count);
     }
 
-    template<typename Tp, class InputStream>
+    template<class InputStream>
     std::string read_unf_str(InputStream&& stream, u64 count)
     {
         return read_unf_container<std::string>(stream, count);

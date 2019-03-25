@@ -4,19 +4,25 @@
  * See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt
 */
 
-#include "all.hpp"
+#include <iostream>
+#include <map>
+#include <functional>
 
-std::vector<std::function<void()>>& get_test_vector()
+std::multimap<std::string, std::function<void()>>& get_test_map()
 {
-    static std::vector<std::function<void()>> result;
+    static std::multimap<std::string, std::function<void()>> result;
     return result;
 }
 
 void run_all_tests()
 {
-    std::cout << "Running " << get_test_vector().size() << " tests..." << std::endl;
-    for (auto& test : get_test_vector())
-        test();
+    std::cout << "Running " << get_test_map().size() << " tests...\n\n";
+    for (auto& [name, func] : get_test_map())
+    {
+        std::cout << name;
+        func();
+        std::cout << ": OK" << std::endl;
+    }
     std::cout << "All tests passed!" << std::endl << std::endl;
 }
 

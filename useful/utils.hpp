@@ -12,13 +12,13 @@ namespace uf
     namespace detail
     {
         template<typename Tp, u64... Ns>
-        constexpr auto tuple_clone_value_helper(Tp&& value, std::index_sequence<Ns...>)
+        constexpr auto tuple_clone_value_helper(Tp&& value, sequence<Ns...>)
         {
-            return std::make_tuple(mt::clone_ref<Ns>(value)...);
+            return std::make_tuple(mt::clone_something<Ns>(value)...);
         }
 
         template<typename T, typename F, u64... Ns>
-        constexpr void tuple_for_each_helper(T&& t, F&& f, std::index_sequence<Ns...>)
+        constexpr void tuple_for_each_helper(T&& t, F&& f, sequence<Ns...>)
         {
             (std::invoke(f, std::get<Ns>(std::forward<T>(t))), ...);
         }
@@ -42,19 +42,19 @@ namespace uf
         }
 
         template<typename T, typename F, u64... SArgs>
-        constexpr auto tuple_transform_helper(T&& t, F&& f, std::index_sequence<SArgs...>)
+        constexpr auto tuple_transform_helper(T&& t, F&& f, sequence<SArgs...>)
         {
             return std::make_tuple(std::invoke(f, std::get<SArgs>(std::forward<T>(t)))...);
         }
 
         template<typename T, typename F, u64... SArgs, u64... Ns>
-        constexpr auto tuple_transform_only_helper(T&& t, F&& f, std::index_sequence<SArgs...>, std::index_sequence<Ns...>)
+        constexpr auto tuple_transform_only_helper(T&& t, F&& f, sequence<SArgs...>, sequence<Ns...>)
         {
             return std::make_tuple(tuple_transform_only_helper2<SArgs, Ns...>(std::get<SArgs>(t), f)...);
         }
 
         template<typename T, typename F, u64... SArgs, u64... Ns>
-        constexpr auto tuple_transform_exclude_helper(T&& t, F&& f, std::index_sequence<SArgs...>, std::index_sequence<Ns...>)
+        constexpr auto tuple_transform_exclude_helper(T&& t, F&& f, sequence<SArgs...>, sequence<Ns...>)
         {
             return std::make_tuple(tuple_transform_exclude_helper2<SArgs, Ns...>(std::get<SArgs>(t), f)...);
         }
@@ -127,38 +127,40 @@ namespace uf
     template<u64 N, typename Tp>
     constexpr auto tuple_clone_value(Tp&& value)
     {
-        return detail::tuple_clone_value_helper(std::forward<Tp>(value), std::make_index_sequence<N>());
+        return detail::tuple_clone_value_helper(std::forward<Tp>(value), make_sequence<N>());
     }
 
     template<typename T, typename F>
     constexpr void tuple_for_each(T&& t, F&& f)
     {
-        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>());
+        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>());
     }
 
+    // TODO: duplicates <1, 1, 1>
     template<u64... Ns, typename T, typename F>
     constexpr void tuple_for_each_only(T&& t, F&& f)
     {
-        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), std::index_sequence<Ns...>());
+        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), sequence<Ns...>());
     }
 
     template<u64... Ns, typename T, typename F>
     constexpr void tuple_for_each_exclude(T&& t, F&& f)
     {
-        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), mt::seq_remove_t<std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), Ns...>());
+        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), mt::seq_remove_t<make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>, Ns...>());
     }
 
     template<typename T, typename F>
     constexpr auto tuple_transform(T&& t, F&& f)
     {
-        return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>());
+        return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>());
     }
 
+    // TODO: duplicates <1, 1, 1>
     template<u64... Ns, typename T, typename F>
     constexpr auto tuple_transform_only(T&& t, F&& f)
     {
         if constexpr (sizeof...(Ns))
-            return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), std::index_sequence<Ns...>());
+            return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), sequence<Ns...>());
         else
             return tuple_clone_value<std::tuple_size_v<std::remove_reference_t<T>>>(u8(0));
     }
@@ -167,28 +169,29 @@ namespace uf
     constexpr auto tuple_transform_exclude(T&& t, F&& f)
     {
         if constexpr (sizeof...(Ns))
-            return tuple_transform_exclude_helper(std::forward<T>(t), std::forward<F>(f), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), std::index_sequence<Ns...>());
+            return tuple_transform_exclude_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), sequence<Ns...>());
         else
             return tuple_transform(std::forward<T>(t), std::forward<F>(f));
     }
 
     template<class R, class SeqContainer>
-    R add_positions(SeqContainer&& x)
+    R add_positions(SeqContainer&& c)
     {
         R result;
         u64 j = 0;
-        for (auto i = x.begin(); i != x.end(); ++i, ++j)
+        for (auto i = c.begin(); i != c.end(); ++i, ++j)
             result.push_back(std::make_pair(j, forward_element<SeqContainer>(*i)));
         return result;
     }
 
     template<class SeqContainer>
-    auto add_positions(SeqContainer&& x)
+    auto add_positions(SeqContainer&& c)
     {
         using decayed = std::decay_t<SeqContainer>;
         using value_type = typename decayed::value_type;
         using result_type = typename mt::clean<decayed>::template type<std::pair<u64, value_type>>;
-        return add_positions<result_type>(x);
+
+        return add_positions<result_type>(c);
     }
 
     template<typename Tp, typename C, typename F>
@@ -224,7 +227,7 @@ namespace uf
     template<class AssocContainer, class... Rs>
     void remove_associative(AssocContainer& c, Rs&&... rs)
     {
-        for (auto i = c.cbegin(); i != c.cend();)
+        for (auto i = c.begin(); i != c.end();)
         {
             if (stf_one(*i, rs...))
                 i = c.erase(i);
@@ -252,7 +255,7 @@ namespace uf
     }
 
     template<typename Tp>
-    class ptr_and_size
+    class ptrsize
     {
     public:
         using element_type = Tp;
@@ -262,7 +265,7 @@ namespace uf
         u64 size_;
 
     public:
-        ptr_and_size(element_type* ptr, u64 size) : ptr_(ptr), size_(size) { }
+        ptrsize(element_type* ptr, u64 size) : ptr_(ptr), size_(size) { }
 
         element_type& operator[](u64 i) const noexcept
         {
@@ -272,7 +275,7 @@ namespace uf
         element_type& at(u64 i) const
         {
             if (i >= size_)
-                throw std::out_of_range("ptr_and_size: Out of range");
+                throw std::out_of_range("ptrsize: Out of range");
             return ptr_[i];
         }
 
@@ -288,7 +291,7 @@ namespace uf
     };
 
     template<typename Tp>
-    ptr_and_size(Tp*, u64) -> ptr_and_size<Tp>;
+    ptrsize(Tp*, u64) -> ptrsize<Tp>;
 
     class spinlock
     {
@@ -300,11 +303,11 @@ namespace uf
             return !flag_.test_and_set(std::memory_order_acquire);
         }
 
-        template<typename Period, i64 Count>
-        void lock()
+        template<typename Period>
+        void lock(i64 count)
         {
             while (flag_.test_and_set(std::memory_order_acquire))
-                std::this_thread::sleep_for(std::chrono::duration<i64, Period>(Count));
+                std::this_thread::sleep_for(std::chrono::duration<i64, Period>(count));
         }
 
         void lock()

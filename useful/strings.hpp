@@ -22,24 +22,44 @@ namespace uf
         }
 
         template<class SeqContainer, class IterVector, u64... Ns>
-        auto build_split_tuple(IterVector&& iters, std::index_sequence<Ns...>)
+        auto build_split_tuple(IterVector&& iters, sequence<Ns...>)
         {
             return std::tuple(SeqContainer(iters[Ns].first, iters[Ns].second)...);
         }
     }
     // namespace detail
 
+    constexpr bool is_digit(char c) noexcept
+    {
+        return c >= '0' && c <= '9';
+    }
+
+    constexpr bool is_lower(char c) noexcept
+    {
+        return c >= 'a' && c <= 'z';
+    }
+
+    constexpr bool is_upper(char c) noexcept
+    {
+        return c >= 'A' && c <= 'Z';
+    }
+
+    constexpr bool is_letter(char c) noexcept
+    {
+        return is_lower(c) || is_upper(c);
+    }
+
     void lowercase(std::string& s)
     {
         for (char& c : s)
-            if (c >= 'A' && c <= 'Z')
+            if (is_upper(c))
                 c += 'a' - 'A';
     }
 
     void uppercase(std::string& s)
     {
         for (char& c : s)
-            if (c >= 'a' && c <= 'z')
+            if (is_lower(c))
                 c -= 'a' - 'A';
     }
 
@@ -119,7 +139,7 @@ namespace uf
     template<u64 N, class SeqContainer, class... Ds>
     auto split(const SeqContainer& c, Ds&&... ds)
     {
-        return detail::build_split_tuple<SeqContainer>(split_itr(c, ds...), std::make_index_sequence<N>());
+        return detail::build_split_tuple<SeqContainer>(split_itr(c, ds...), make_sequence<N>());
     }
 
     template<class SeqContainer, class... Ds>
@@ -164,71 +184,53 @@ namespace uf
     template<u64 N, class SeqContainer, class... Ds>
     auto split_strong(const SeqContainer& c, Ds&&... ds)
     {
-        return detail::build_split_tuple<SeqContainer>(split_strong_itr(c, ds...), std::make_index_sequence<N>());
+        return detail::build_split_tuple<SeqContainer>(split_strong_itr(c, ds...), make_sequence<N>());
     }
 
-    template<class SeqContainer1, class SeqContainer2, enif<mt::is_iterable_v<std::decay_t<SeqContainer2>>> = sdef>
-    bool starts_with(const SeqContainer1& c, const SeqContainer2& pattern)
+    template<class C1, class C2, disif<std::is_convertible_v<C2, typename C1::value_type>> = sdef>
+    bool starts_with(const C1& c, const C2& pattern)
     {
-        if (pattern.size() > c.size())
-            return false;
-        for (auto i1 = c.begin(), i2 = pattern.begin(); i2 != pattern.end(); ++i1, ++i2)
+        auto i1 = std::begin(c);
+        auto i2 = std::begin(pattern);
+        for (; i1 != std::end(c) && i2 != std::end(pattern); ++i1, ++i2)
             if (*i1 != *i2)
                 return false;
-        return true;
+        return i2 == std::end(pattern) ? true : false;
     }
 
-    template<class SeqContainer1, class First, disif<mt::is_iterable_v<std::decay_t<First>>> = sdef>
-    bool starts_with(const SeqContainer1& c, const First& first)
+    template<class C, class E, enif<std::is_convertible_v<E, typename C::value_type>> = sdef>
+    bool starts_with(const C& c, const E& e)
     {
-        return !c.empty() && *c.begin() == first;
+        return !c.empty() && *std::begin(c) == e;
     }
 
-    template<class SeqContainer1, class SeqContainer2, enif<mt::is_iterable_v<std::decay_t<SeqContainer2>>> = sdef>
-    bool ends_with(const SeqContainer1& c, const SeqContainer2& pattern)
+    template<class C1, class C2, disif<std::is_convertible_v<C2, typename C1::value_type>> = sdef>
+    bool ends_with(const C1& c, const C2& pattern)
     {
-        if (pattern.size() > c.size())
-            return false;
-        for (auto i1 = c.rbegin(), i2 = pattern.rbegin(); i2 != pattern.rend(); ++i1, ++i2)
+        auto i1 = std::rbegin(c);
+        auto i2 = std::rbegin(pattern);
+        for (; i1 != std::rend(c) && i2 != std::rend(pattern); ++i1, ++i2)
             if (*i1 != *i2)
                 return false;
-        return true;
+        return i2 == std::rend(pattern) ? true : false;
     }
 
-    template<class SeqContainer1, class First, disif<mt::is_iterable_v<std::decay_t<First>>> = sdef>
-    bool ends_with(const SeqContainer1& c, const First& first)
+    template<class C, class E, enif<std::is_convertible_v<E, typename C::value_type>> = sdef>
+    bool ends_with(const C& c, const E& e)
     {
-        return !c.empty() && *c.rbegin() == first;
+        return !c.empty() && *std::rbegin(c) == e;
     }
 
-    template<typename Tp, enif<std::is_floating_point_v<Tp>> = sdef>
-    Tp from_string(const std::string& s)
+    template<class C, u64 N>
+    bool starts_with(const C& c, const char(&literal)[N])
     {
-        return std::stold(s);
+        return starts_with(c, std::string_view(literal, N - 1));
     }
 
-    template<typename Tp, enif<std::is_integral_v<Tp> && std::is_signed_v<Tp>> = sdef>
-    Tp from_string(const std::string& s)
+    template<class C, u64 N>
+    bool ends_with(const C& c, const char(&literal)[N])
     {
-        return std::stoll(s);
-    }
-
-    template<typename Tp, enif<std::is_integral_v<Tp> && std::is_unsigned_v<Tp>> = sdef>
-    Tp from_string(const std::string& s)
-    {
-        return std::stoull(s);
-    }
-
-    template<typename Tp, typename Str, enif<std::is_same_v<Tp, std::string>> = sdef>
-    Tp from_string(Str&& s)
-    {
-        return std::forward<Str>(s);
-    }
-
-    template<typename Tp>
-    void from_string(const std::string& s, Tp& v)
-    {
-        v = from_string<Tp>(s);
+        return ends_with(c, std::string_view(literal, N - 1));
     }
 }
 // namespace uf
