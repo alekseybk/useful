@@ -278,7 +278,7 @@ namespace uf::mt
     struct is_same_template<Expected, Expected<Ts...>> : public std::true_type { };
 
     template<template<typename...> typename Expected, typename Tested>
-    inline constexpr bool is_same_template_v =  is_same_template<Expected, std::decay_t<Tested>>::value;
+    inline constexpr bool is_same_template_v =  is_same_template<Expected, Tested>::value;
 
     template<typename... Ts>
     struct first;

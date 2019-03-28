@@ -287,10 +287,13 @@ namespace uf
     template<typename Tp>
     class span
     {
-        static_assert(std::is_same_v<std::remove_reference_t<Tp>, Tp> || std::is_array_v<Tp>, "Invalid span type");
+        static_assert(std::is_same_v<std::remove_reference_t<Tp>, Tp>);
+        template<typename> friend class span;
 
     public:
         using value_type = Tp;
+        using pointer = value_type*;
+        using reference = value_type&;
 
     private:
         Tp* begin_;
@@ -301,17 +304,10 @@ namespace uf
         span(T1&& begin, u64 count) : begin_(get_underlying_ptr(begin)), size_(count) { }
 
         template<typename T1, typename T2, disif<std::is_integral_v<std::decay_t<T2>>> = sdef>
-        span(T1&& begin, T2&& end) : begin_(get_underlying_ptr(begin)), size_(std::distance<Tp*>(begin_, get_underlying_ptr(end))) { }
+        span(T1&& begin, T2&& end) : begin_(get_underlying_ptr(begin)), size_(std::distance<pointer>(begin_, get_underlying_ptr(end))) { }
 
-        template<typename C, enif<mt::is_iterable_v<C> && !mt::is_same_template_v<span, C>> = sdef>
+        template<typename C, enif<mt::is_iterable_v<C>> = sdef>
         span(C&& container) : span(container.begin(), container.end()) { }
-
-        template<typename T>
-        operator span<T>() const noexcept
-        {
-            static_assert(std::is_same_v<const Tp, T> || std::is_same_v<const volatile Tp, T>, "Cast allow only to more cv-qualified");
-            return span<T>(begin_, size_);
-        }
 
         u64 size() const noexcept
         {
