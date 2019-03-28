@@ -353,9 +353,18 @@ namespace uf::mt
     template<class Tp>
     inline constexpr bool is_smart_pointer_v = is_smart_pointer<Tp>::value;
 
+    template<typename Tp, typename = sfinae>
+    struct is_iterator : public std::false_type { };
+
+    template<typename Tp>
+    struct is_iterator<Tp, sfinae_t<typename std::iterator_traits<Tp>::iterator_category>> : public std::true_type { };
+
+    template<typename Tp, typename = sfinae>
+    inline constexpr bool is_iterator_v = is_iterator<Tp>::value;
+
     // **********************************
 
-    template<class Tp, typename = void>
+    template<class Tp, typename = sfinae>
     struct is_iterable : public std::false_type { };
 
     template<class Tp>
@@ -364,11 +373,11 @@ namespace uf::mt
     template<class Tp>
     inline constexpr bool is_iterable_v = is_iterable<Tp>::value;
 
-    template<typename Tp, typename = void>
+    template<typename Tp, typename = sfinae>
     struct is_deref : public std::false_type { };
 
     template<typename Tp>
-    struct is_deref<Tp, std::void_t<decltype(*std::declval<Tp>())>> : public std::true_type { };
+    struct is_deref<Tp, sfinae_t<decltype(*std::declval<Tp>())>> : public std::true_type { };
 
     template<class Tp>
     inline constexpr bool is_deref_v = is_deref<Tp>::value;

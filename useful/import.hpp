@@ -19,6 +19,7 @@
 #include <stack>
 #include <queue>
 #include <deque>
+#include <iterator>
 
 #include <iostream>
 #include <fstream>

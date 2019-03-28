@@ -79,13 +79,13 @@ namespace uf
     }
     // namespace detail
 
-    template<typename Owner, typename E, enif<std::is_lvalue_reference_v<Owner>> = sdef>
+    template<typename Container, typename E, enif<std::is_lvalue_reference_v<Container>> = sdef>
     constexpr auto&& forward_element(E&& e)
     {
         return std::forward<E>(e);
     }
 
-    template<typename Owner, typename E, enif<!std::is_reference_v<Owner>> = sdef>
+    template<typename Container, typename E, enif<!std::is_reference_v<Container>> = sdef>
     constexpr auto&& forward_element(E&& e)
     {
         return std::move(e);
@@ -175,23 +175,35 @@ namespace uf
     }
 
     template<class R, class SeqContainer>
-    R add_positions(SeqContainer&& c)
+    R add_positions(SeqContainer&& x)
     {
         R result;
+        result.reserve(x.size());
         u64 j = 0;
-        for (auto i = c.begin(); i != c.end(); ++i, ++j)
-            result.push_back(std::make_pair(j, forward_element<SeqContainer>(*i)));
+        for (auto i = x.begin(); i != x.end(); ++i, ++j)
+            result.emplace_back(j, forward_element<SeqContainer>(*i));
         return result;
     }
 
     template<class SeqContainer>
-    auto add_positions(SeqContainer&& c)
+    auto add_positions(SeqContainer&& x)
     {
         using decayed = std::decay_t<SeqContainer>;
         using value_type = typename decayed::value_type;
         using result_type = typename mt::clean<decayed>::template type<std::pair<u64, value_type>>;
 
-        return add_positions<result_type>(c);
+        return add_positions<result_type>(x);
+    }
+
+    template<class SeqContainer, typename Compare>
+    auto add_positions_sort(SeqContainer&& c, Compare&& compare)
+    {
+        auto result = add_positions(std::forward<SeqContainer>(c));
+        std::sort(result.begin(), result.end(), [&compare](const auto& e1, const auto& e2)
+        {
+             return compare(e1.second, e2.second);
+        });
+        return result;
     }
 
     template<typename Tp, typename C, typename F>
@@ -240,7 +252,7 @@ namespace uf
     AssocContainer remove_associative_copy(const AssocContainer& c, Rs&&... rs)
     {
         AssocContainer result;
-        for (auto i = c.cbegin(); i != c.cend(); ++i)
+        for (auto i = c.begin(); i != c.end(); ++i)
             if (!stf_one(*i, rs...))
                 result.insert(*i);
         return result;
@@ -254,44 +266,89 @@ namespace uf
         return detail::binary_search_impl(left, right - 1, right, value, std::forward<F>(f));
     }
 
-    template<typename Tp>
-    class ptrsize
+    template<typename T>
+    auto* get_underlying_ptr(T* object)
     {
+        return object;
+    }
+
+    template<typename T, enif<uf::mt::is_iterator_v<std::decay_t<T>>> = sdef>
+    auto* get_underlying_ptr(T&& object)
+    {
+        return object.base();
+    }
+
+    template<typename T, enif<uf::mt::is_smart_pointer_v<std::decay_t<T>>> = sdef>
+    auto* get_underlying_ptr(T&& object)
+    {
+        return object.get();
+    }
+
+    template<typename Tp>
+    class span
+    {
+        static_assert(std::is_same_v<std::remove_reference_t<Tp>, Tp> || std::is_array_v<Tp>, "Invalid span type");
+
     public:
-        using element_type = Tp;
+        using value_type = Tp;
 
     private:
-        element_type* ptr_;
+        Tp* begin_;
         u64 size_;
 
     public:
-        ptrsize(element_type* ptr, u64 size) : ptr_(ptr), size_(size) { }
+        template<typename T1>
+        span(T1&& begin, u64 count) : begin_(get_underlying_ptr(begin)), size_(count) { }
 
-        element_type& operator[](u64 i) const noexcept
-        {
-            return ptr_[i];
-        }
+        template<typename T1, typename T2, disif<std::is_integral_v<std::decay_t<T2>>> = sdef>
+        span(T1&& begin, T2&& end) : begin_(get_underlying_ptr(begin)), size_(std::distance<Tp*>(begin_, get_underlying_ptr(end))) { }
 
-        element_type& at(u64 i) const
-        {
-            if (i >= size_)
-                throw std::out_of_range("ptrsize: Out of range");
-            return ptr_[i];
-        }
+        template<typename C, enif<mt::is_iterable_v<C> && !mt::is_same_template_v<span, C>> = sdef>
+        span(C&& container) : span(container.begin(), container.end()) { }
 
-        element_type* ptr() const noexcept
+        template<typename T>
+        operator span<T>() const noexcept
         {
-            return ptr_;
+            static_assert(std::is_same_v<const Tp, T> || std::is_same_v<const volatile Tp, T>, "Cast allow only to more cv-qualified");
+            return span<T>(begin_, size_);
         }
 
         u64 size() const noexcept
         {
             return size_;
         }
+
+        Tp* begin() const noexcept
+        {
+            return begin_;
+        }
+
+        Tp* end() const noexcept
+        {
+            return begin_ + size_;
+        }
+
+        Tp& operator[](u64 i)
+        {
+            return begin_[i];
+        }
+
+        Tp& at(u64 i)
+        {
+            if (i >= size_)
+                throw std::out_of_range("span::at(u64): Out of range");
+           return operator[](i);
+        }
     };
 
-    template<typename Tp>
-    ptrsize(Tp*, u64) -> ptrsize<Tp>;
+    template<typename C, sfinae = sdef>
+    span(C&&) -> span<typename std::decay_t<C>::value_type>;
+
+    template<typename T1, typename T2>
+    span(T1&&, T2&&) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<std::decay_t<T1>>()))>>;
+
+    template<typename T1>
+    span(T1&&, u64) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<std::decay_t<T1>>()))>>;
 
     class spinlock
     {

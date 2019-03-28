@@ -234,3 +234,56 @@ TEST(remove_associative_copy)
     }
 }
 
+TEST(span)
+{
+    {
+        std::vector<int> v{2, 5};
+        span s(v);
+        assert_eq(s.size(), 2);
+        assert_eq(s[0], 2);
+        assert_eq(s[1], 5);
+    }
+
+    {
+        std::string str("12");
+        span s(str);
+        assert_eq(s.size(), 2);
+        assert_eq(s[0], '1');
+        assert_eq(s[1], '2');
+    }
+
+    {
+        std::vector<int> v{2, 5};
+        span s(v.begin(), v.end());
+        assert_eq(s.size(), 2);
+        assert_eq(s[0], 2);
+        assert_eq(s[1], 5);
+    }
+
+    {
+        std::string str("12");
+        span s(str.begin(), str.end());
+        assert_eq(s.size(), 2);
+        assert_eq(s[0], '1');
+        assert_eq(s[1], '2');
+    }
+
+    {
+        std::string str("12");
+        span s(str.data(), 2);
+        assert_eq(s.size(), 2);
+        assert_eq(s[0], '1');
+        assert_eq(s[1], '2');
+    }
+
+    {
+        std::string str("12");
+        span s(str.data(), 2);
+        span<const char> cs(str);
+        span<const volatile char> cvs(cs);
+        assert_eq(cvs.size(), 2);
+        assert_eq(cvs[0], '1');
+        assert_eq(cvs[1], '2');
+    }
+}
+
