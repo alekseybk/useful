@@ -1,9 +1,3 @@
-/*
- * Copyright Aleksey Verkholat 2018
- * Distributed under the Boost Software License, Version 1.0.
- * See accompanying file LICENSE or copy at https://www.boost.org/LICENSE_1_0.txt
-*/
-
 #pragma once
 #include "import.hpp"
 
@@ -333,37 +327,8 @@ namespace uf::mt
     template<typename Tp, typename... Ts>
     inline constexpr bool is_one_of_v = is_one_of<Tp, Ts...>::value;
 
-    template<typename S>
-    struct is_positive_sequence;
-
-    template<auto... Ns>
-    struct is_positive_sequence<sequence<Ns...>> : public std::bool_constant<((Ns >= 0) && ...)> { };
-
-    template<typename S>
-    inline constexpr bool is_positive_sequence_v = is_positive_sequence<S>::value;
-
-    template<typename Tp>
-    struct is_smart_pointer
-    {
-        static const bool value = is_same_template_v<std::unique_ptr, Tp> ||
-                                  is_same_template_v<std::shared_ptr, Tp> ||
-                                  is_same_template_v<std::weak_ptr, Tp>;
-    };
-
-    template<class Tp>
-    inline constexpr bool is_smart_pointer_v = is_smart_pointer<Tp>::value;
-
-    template<typename Tp, typename = sfinae>
-    struct is_iterator : public std::false_type { };
-
-    template<typename Tp>
-    struct is_iterator<Tp, sfinae_t<typename std::iterator_traits<Tp>::iterator_category>> : public std::true_type { };
-
-    template<typename Tp, typename = sfinae>
-    inline constexpr bool is_iterator_v = is_iterator<Tp>::value;
 
     // **********************************
-
     template<class Tp, typename = sfinae>
     struct is_iterable : public std::false_type { };
 
@@ -381,5 +346,52 @@ namespace uf::mt
 
     template<class Tp>
     inline constexpr bool is_deref_v = is_deref<Tp>::value;
+
+    // **********************************
+    template<typename S>
+    struct is_positive_sequence : std::false_type { };
+
+    template<auto... Ns>
+    struct is_positive_sequence<sequence<Ns...>> : public std::bool_constant<((Ns >= 0) && ...)> { };
+
+    template<typename S>
+    inline constexpr bool is_positive_sequence_v = is_positive_sequence<S>::value;
+
+    template<typename Tp>
+    struct is_smart_pointer
+    {
+        static const bool value = is_same_template_v<std::unique_ptr, Tp> || is_same_template_v<std::shared_ptr, Tp> || is_same_template_v<std::weak_ptr, Tp>;
+    };
+
+    template<class Tp>
+    inline constexpr bool is_smart_pointer_v = is_smart_pointer<Tp>::value;
+
+    template<typename Tp, typename = sfinae>
+    struct is_iterator : public std::false_type { };
+
+    template<typename Tp>
+    struct is_iterator<Tp, sfinae_t<typename std::iterator_traits<Tp>::iterator_category>> : public std::true_type { };
+
+    template<typename Tp, typename = sfinae>
+    inline constexpr bool is_iterator_v = is_iterator<Tp>::value;
+
+    template<typename Tp, typename = sfinae>
+    struct is_random_access_iterator : public std::false_type { };
+
+    template<typename Tp>
+    struct is_random_access_iterator<Tp, enif<std::is_same_v<typename std::iterator_traits<Tp>::iterator_category, std::random_access_iterator_tag>>> : public std::true_type { };
+
+    template<typename Tp>
+    inline constexpr bool is_random_access_iterator_v = is_random_access_iterator<Tp>::value;
+
+    template<typename Tp, typename = sfinae>
+    struct is_random_access_container : std::false_type { };
+
+    template<typename Tp>
+    struct is_random_access_container<Tp, enif<is_iterable_v<Tp>>> : public is_random_access_iterator<typename std::remove_reference_t<Tp>::iterator> { };
+
+    template<typename Tp>
+    inline constexpr bool is_random_access_container_v = is_random_access_container<Tp>::value;
+
 }
 // namespace uf::mt

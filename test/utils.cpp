@@ -228,6 +228,12 @@ TEST(remove_associative_copy)
     }
 }
 
+template<typename C>
+void f(C&&)
+{
+    cout << mt::is_iterable_v<std::remove_reference_t<C>> << endl;
+}
+
 TEST(span)
 {
     {
@@ -240,44 +246,35 @@ TEST(span)
 
     {
         std::string str("12");
-        span s(str);
-        assert_eq(s.size(), 2);
-        assert_eq(s[0], '1');
-        assert_eq(s[1], '2');
-    }
-
-    {
-        std::vector<int> v{2, 5};
-        span s(v.begin(), v.end());
-        assert_eq(s.size(), 2);
-        assert_eq(s[0], 2);
-        assert_eq(s[1], 5);
-    }
-
-    {
-        std::string str("12");
-        span s(str.begin(), str.end());
-        assert_eq(s.size(), 2);
-        assert_eq(s[0], '1');
-        assert_eq(s[1], '2');
-    }
-
-    {
-        std::string str("12");
         span s(str.data(), 2);
-        assert_eq(s.size(), 2);
-        assert_eq(s[0], '1');
-        assert_eq(s[1], '2');
+        const span<const char> cs(str);
+        assert_eq(cs.size(), 2);
+        assert_eq(cs[0], '1');
+        assert_eq(cs[1], '2');
+        s[0] = 'e';
+        assert_eq(cs[0], 'e');
     }
 
     {
-        std::string str("12");
-        span s(str.data(), 2);
-        span<const char> cs(str);
-        span<const volatile char> cvs(cs);
-        assert_eq(cvs.size(), 2);
-        assert_eq(cvs[0], '1');
-        assert_eq(cvs[1], '2');
+        std::vector<double> v{1.35, 1.112, 5.55};
+        span s(v);
+        auto j = s.crbegin();
+        for (i64 i = 2; j != s.crend(); --i, ++j)
+            assert_eq(v[i], *j);
+    }
+
+    {
+        int a1[5]{1, 2, 3, 4, 5};
+        span s1(a1);
+        assert_eq(s1.size(), 5);
+        assert_eq(s1[3], 4);
+    }
+
+    {
+        std::array<int, 5> a2{{1, 2, 3, 4, 5}};
+        span s2(a2);
+        assert_eq(s2.size(), 5);
+        assert_eq(s2[3], 4);
     }
 }
 

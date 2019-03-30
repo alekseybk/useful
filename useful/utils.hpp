@@ -278,68 +278,6 @@ namespace uf
         return object.get();
     }
 
-    template<typename Tp>
-    class span
-    {
-        static_assert(std::is_same_v<std::remove_reference_t<Tp>, Tp>);
-        template<typename> friend class span;
-
-    public:
-        using value_type = Tp;
-        using pointer = value_type*;
-        using reference = value_type&;
-
-    private:
-        Tp* begin_;
-        u64 size_;
-
-    public:
-        template<typename T1>
-        span(T1&& begin, u64 count) : begin_(get_underlying_ptr(begin)), size_(count) { }
-
-        template<typename T1, typename T2, disif<std::is_integral_v<std::decay_t<T2>>> = sdef>
-        span(T1&& begin, T2&& end) : begin_(get_underlying_ptr(begin)), size_(std::distance<pointer>(begin_, get_underlying_ptr(end))) { }
-
-        template<typename C, enif<mt::is_iterable_v<C>> = sdef>
-        span(C&& container) : span(container.begin(), container.end()) { }
-
-        u64 size() const noexcept
-        {
-            return size_;
-        }
-
-        Tp* begin() const noexcept
-        {
-            return begin_;
-        }
-
-        Tp* end() const noexcept
-        {
-            return begin_ + size_;
-        }
-
-        Tp& operator[](u64 i)
-        {
-            return begin_[i];
-        }
-
-        Tp& at(u64 i)
-        {
-            if (i >= size_)
-                throw std::out_of_range("span::at(u64): Out of range");
-           return operator[](i);
-        }
-    };
-
-    template<typename C, sfinae = sdef>
-    span(C&&) -> span<typename std::decay_t<C>::value_type>;
-
-    template<typename T1, typename T2>
-    span(T1&&, T2&&) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<std::decay_t<T1>>()))>>;
-
-    template<typename T1>
-    span(T1&&, u64) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<std::decay_t<T1>>()))>>;
-
     class spinlock
     {
         std::atomic_flag flag_ = ATOMIC_FLAG_INIT;

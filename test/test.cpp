@@ -13,9 +13,8 @@ void run_all_tests()
     std::cout << "Running " << get_test_map().size() << " tests...\n\n";
     for (auto& [name, func] : get_test_map())
     {
-        std::cout << name;
         func();
-        std::cout << ": OK" << std::endl;
+        std::cout << name << ": OK" << std::endl;
     }
     std::cout << "All tests passed!" << std::endl << std::endl;
 }
@@ -23,4 +22,5 @@ void run_all_tests()
 int main()
 {
     run_all_tests();
+    return 0;
 }

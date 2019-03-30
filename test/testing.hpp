@@ -2,6 +2,10 @@
 #include <map>
 #include <functional>
 #include <cassert>
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 #define assert_true(expr) assert(expr)
 #define assert_false(expr) assert(!(expr))
