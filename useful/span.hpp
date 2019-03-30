@@ -123,16 +123,16 @@ namespace uf
     };
 
     template<typename T1>
-    span(T1&&, u64) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<std::decay_t<T1>>()))>>;
+    span(T1&&, u64) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<T1&&>()))>>;
 
     template<typename T1, typename T2>
-    span(T1&&, T2&&) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<std::decay_t<T1>>()))>>;
+    span(T1&&, T2&&) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<T1&&>()))>>;
 
     template<typename C, sfinae = sdef>
-    span(C&&) -> span<std::remove_const_t<std::remove_reference_t<decltype(*std::begin(std::declval<C>()))>>>;
+    span(C&&) -> span<std::remove_const_t<std::remove_reference_t<decltype(*std::begin(std::declval<C&&>()))>>>;
 
     template<typename T>
-    span(std::initializer_list<T>) -> span<T>;
+    span(std::initializer_list<T>) -> span<const T>;
 
     template<typename T, u64 N>
     span(T(&)[N]) -> span<T>;

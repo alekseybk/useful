@@ -1,6 +1,7 @@
 #include "testing.hpp"
 
 #include "../useful/utils.hpp"
+#include "../useful/span.hpp"
 
 using namespace uf;
 
@@ -275,6 +276,12 @@ TEST(span)
         span s2(a2);
         assert_eq(s2.size(), 5);
         assert_eq(s2[3], 4);
+    }
+
+    {
+        std::string s;
+        const std::string& sref = s;
+        span sp{s};
     }
 }
 
