@@ -53,6 +53,18 @@ namespace uf
             return std::make_tuple(tuple_transform_exclude_helper2<SArgs, Ns...>(std::get<SArgs>(t), f)...);
         }
 
+        template<typename T, auto... Ns>
+        constexpr auto subtuple_ref_helper(T&& t, sequence<Ns...>)
+        {
+            return std::tuple<decltype(std::get<Ns>(std::forward<T>(t)))...>(std::get<Ns>(std::forward<T>(t))...);
+        }
+
+        template<typename T, auto... Ns>
+        constexpr auto subtuple_helper(T&& t, sequence<Ns...>)
+        {
+            return std::make_tuple(std::get<Ns>(std::forward<T>(t))...);
+        }
+
         template<typename Index, typename Tp, class F>
         Index binary_search_impl(Index left, Index right, Index end, Tp&& value, F&& f)
         {
@@ -137,6 +149,14 @@ namespace uf
         detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), sequence<Ns...>());
     }
 
+    // TODO: duplicates <1, 1, 1>
+    template<typename S, typename T, typename F>
+    constexpr void tuple_for_each_only(T&& t, F&& f)
+    {
+        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), S());
+    }
+
+    // TODO: sequence version
     template<u64... Ns, typename T, typename F>
     constexpr void tuple_for_each_exclude(T&& t, F&& f)
     {
@@ -159,6 +179,17 @@ namespace uf
             return tuple_clone_value<std::tuple_size_v<std::remove_reference_t<T>>>(u8(0));
     }
 
+    // TODO: duplicates <1, 1, 1>
+    template<typename S, typename T, typename F>
+    constexpr auto tuple_transform_only(T&& t, F&& f)
+    {
+        if constexpr (S::size)
+            return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), S());
+        else
+            return tuple_clone_value<std::tuple_size_v<std::remove_reference_t<T>>>(u8(0));
+    }
+
+    // TODO: sequence version
     template<u64... Ns, typename T, typename F>
     constexpr auto tuple_transform_exclude(T&& t, F&& f)
     {
@@ -266,13 +297,13 @@ namespace uf
         return object;
     }
 
-    template<typename T, enif<mt::is_iterator_v<std::decay_t<T>>> = sdef, disif<mt::is_same_template_v<std::reverse_iterator, std::remove_reference_t<T>>> = sdef>
+    template<typename T, enif<mt::is_iterator_v<std::decay_t<T>>> = sdef, disif<mt::is_instantiated_from_v<std::reverse_iterator, std::remove_reference_t<T>>> = sdef>
     auto* get_underlying_ptr(T&& object)
     {
         return object.base();
     }
 
-    template<typename T, enif<mt::is_same_template_v<std::reverse_iterator, std::remove_reference_t<T>>> = sdef>
+    template<typename T, enif<mt::is_instantiated_from_v<std::reverse_iterator, std::remove_reference_t<T>>> = sdef>
     auto* get_underlying_ptr(T&& object)
     {
         auto b = object.base();
@@ -283,6 +314,26 @@ namespace uf
     auto* get_underlying_ptr(T&& object)
     {
         return object.get();
+    }
+
+    template<u64 B = 0, u64 E = std::numeric_limits<u64>::max(), typename T>
+    auto subtuple_ref(T&& t)
+    {
+        constexpr u64 size = std::tuple_size_v<std::remove_reference_t<T>>;
+        if constexpr (E > size)
+            return detail::subtuple_ref_helper(std::forward<T>(t), make_increasing_sequence<B, size>());
+        else
+            return detail::subtuple_ref_helper(std::forward<T>(t), make_increasing_sequence<B, E>());
+    }
+
+    template<u64 B = 0, u64 E = std::numeric_limits<u64>::max(), typename T>
+    auto subtuple(T&& t)
+    {
+        constexpr u64 size = std::tuple_size_v<std::remove_reference_t<T>>;
+        if constexpr (E > size)
+            return detail::subtuple_helper(std::forward<T>(t), make_increasing_sequence<B, size>());
+        else
+            return detail::subtuple_helper(std::forward<T>(t), make_increasing_sequence<B, E>());
     }
 
     class spinlock

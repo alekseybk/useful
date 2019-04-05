@@ -1,10 +1,12 @@
 #include "testing.hpp"
 
 #include "../useful/meta.hpp"
+#include "../useful/traits.hpp"
 
 #include <memory>
 
 using namespace uf::mt;
+using uf::traits;
 
 TEST(function_trait)
 {
@@ -21,5 +23,11 @@ TEST(is_iterator)
     assert_true((is_iterator_v<std::multimap<int, int>::iterator>));
     assert_false(is_iterator_v<std::shared_ptr<int>>);
     assert_false(is_iterator_v<int>);
+}
+
+TEST(is_iterable)
+{
+    assert_true(traits<std::vector<int>>::is_iterable);
+    assert_true(traits<const std::vector<int>&>::is_iterable);
 }
 

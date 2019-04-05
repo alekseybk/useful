@@ -229,10 +229,14 @@ TEST(remove_associative_copy)
     }
 }
 
-template<typename C>
-void f(C&&)
+TEST(get_underlying_ptr)
 {
-    cout << mt::is_iterable_v<std::remove_reference_t<C>> << endl;
+    {
+        std::vector<int> v{1, 2, 3};
+        auto i = v.begin() + 2;
+        auto ri = v.rbegin();
+        assert_eq(get_underlying_ptr(i), get_underlying_ptr(ri));
+    }
 }
 
 TEST(span)
@@ -282,6 +286,42 @@ TEST(span)
         std::string s;
         const std::string& sref = s;
         span sp{s};
+        static_assert(std::is_same_v<decltype(sp)::value_type, const std::string>);
     }
 }
+
+TEST(subtuple)
+{
+    struct X
+    {
+        int a;
+        X(int a) : a(a) { }
+        X(X&&) = default;
+        X(const X&){ assert(false); }
+    };
+
+
+    std::tuple<X, X, X> t(1, 2, 3);
+    std::tuple<X, X> st = subtuple<1>(std::move(t));
+    std::tuple<X> sst = subtuple<1>(std::move(st));
+    assert_eq(std::get<0>(sst).a, 3);
+
+}
+
+TEST(subtuple_ref)
+{
+    struct X
+    {
+        int a;
+        X(int a) : a(a) { }
+        X(X&&){ assert(false); }
+        X(const X&){ assert(false); }
+    };
+
+    std::tuple<X, X, X> t(1, 2, 3);
+    std::tuple<X&&, X&&> st = subtuple_ref<1>(std::move(t));
+    std::tuple<X&> sst = subtuple_ref<1>(st);
+    assert_eq(std::get<0>(sst).a, 3);
+}
+
 

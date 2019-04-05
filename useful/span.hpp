@@ -6,7 +6,7 @@ namespace uf
     template<typename Tp>
     class span
     {
-        static_assert(std::is_same_v<std::remove_reference_t<Tp>, Tp>, "Span must have a non-reference value_type");
+        static_assert(std::is_same_v<std::remove_volatile_t<std::remove_reference_t<Tp>>, Tp>, "Span must have a non-reference, non-volatile value_type");
 
     public:
         using value_type = Tp;
@@ -49,9 +49,9 @@ namespace uf
             return !size_;
         }
 
-        span subspan(u64 begin, u64 count = std::numeric_limits<u64>::max()) const
+        span subspan(u64 begin = 0, u64 count = std::numeric_limits<u64>::max()) const
         {
-            return span(&data_[begin], &data_[begin + count]);
+            return span(&data_[begin], &data_[begin + std::min(count, size_)]);
         }
 
         reference front() const

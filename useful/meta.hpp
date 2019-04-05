@@ -265,14 +265,32 @@ namespace uf::mt
     template<template<typename...> typename Clean, typename Tp>
     using clean_copy_args_t = typename clean_copy_args<Clean, Tp>::type;
 
-    template<template<typename...> typename Expected, typename Tested>
+    template<typename Tp>
+    struct is_template : public std::false_type { };
+
+    template<template<typename...> typename Tp, typename... Ts>
+    struct is_template<Tp<Ts...>> : public std::true_type { };
+
+    template<typename Tp>
+    inline constexpr bool is_template_v = is_template<Tp>::value;
+
+    template<typename A, typename B>
     struct is_same_template : public std::false_type { };
 
-    template<template<typename...> typename Expected, typename... Ts>
-    struct is_same_template<Expected, Expected<Ts...>> : public std::true_type { };
+    template<template<typename...> typename Tp, typename... A, typename... B>
+    struct is_same_template<Tp<A...>, Tp<B...>> : public std::true_type { };
+
+    template<typename A, typename B>
+    inline constexpr bool is_same_template_v = is_same_template<A, B>::value;
 
     template<template<typename...> typename Expected, typename Tested>
-    inline constexpr bool is_same_template_v =  is_same_template<Expected, Tested>::value;
+    struct is_instantiated_from : public std::false_type { };
+
+    template<template<typename...> typename Expected, typename... Ts>
+    struct is_instantiated_from<Expected, Expected<Ts...>> : public std::true_type { };
+
+    template<template<typename...> typename Expected, typename Tested>
+    inline constexpr bool is_instantiated_from_v =  is_instantiated_from<Expected, Tested>::value;
 
     template<typename... Ts>
     struct first;
@@ -327,7 +345,6 @@ namespace uf::mt
     template<typename Tp, typename... Ts>
     inline constexpr bool is_one_of_v = is_one_of<Tp, Ts...>::value;
 
-
     // **********************************
     template<class Tp, typename = sfinae>
     struct is_iterable : public std::false_type { };
@@ -360,7 +377,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_smart_pointer
     {
-        static const bool value = is_same_template_v<std::unique_ptr, Tp> || is_same_template_v<std::shared_ptr, Tp> || is_same_template_v<std::weak_ptr, Tp>;
+        static const bool value = is_instantiated_from_v<std::unique_ptr, Tp> || is_instantiated_from_v<std::shared_ptr, Tp> || is_instantiated_from_v<std::weak_ptr, Tp>;
     };
 
     template<class Tp>
