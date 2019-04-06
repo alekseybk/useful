@@ -1,6 +1,54 @@
 #pragma once
 #include "import.hpp"
 
+#define DECLARE_V1(name, a1) \
+    template<a1 A1> \
+    inline constexpr auto name##_v = name<A1>::value
+
+#define DECLARE_V2(name, a1, a2) \
+    template<a1 A1, a2 A2> \
+    inline constexpr auto name##_v = name<A1, A2>::value
+
+#define DECLARE_V3(name, a1, a2, a3) \
+    template<a1 A1, a2 A2, a3 A3> \
+    inline constexpr auto name##_v = name<A1, A2, A3>::value
+
+#define DECLARE_T1(name, a1) \
+    template<a1 A1> \
+    using name##_t = typename name<A1>::type
+
+#define DECLARE_T2(name, a1, a2) \
+    template<a1 A1, a2 A2> \
+    using name##_t = typename name<A1, A2>::type
+
+#define DECLARE_T3(name, a1, a2, a3) \
+    template<a1 A1, a2 A2, a3 A3> \
+    using name##_t = typename name<A1, A2, A3>::type
+
+#define DECLARE_V1S(name, a1) \
+    template<a1 A1> \
+    inline constexpr auto name##_v = name<A1...>::value
+
+#define DECLARE_V2S(name, a1, a2) \
+    template<a1 A1, a2 A2> \
+    inline constexpr auto name##_v = name<A1, A2...>::value
+
+#define DECLARE_V3S(name, a1, a2, a3) \
+    template<a1 A1, a2 A2, a3 A3> \
+    inline constexpr auto name##_v = name<A1, A2, A3...>::value
+
+#define DECLARE_T1S(name, a1) \
+    template<a1 A1> \
+    using name##_t = typename name<A1...>::type
+
+#define DECLARE_T2S(name, a1, a2) \
+    template<a1 A1, a2 A2> \
+    using name##_t = typename name<A1, A2...>::type
+
+#define DECLARE_T3S(name, a1, a2, a3) \
+    template<a1 A1, a2 A2, a3 A3> \
+    using name##_t = typename name<A1, A2, A3...>::type
+
 namespace uf::mt
 {
     template<typename, typename Tp>
@@ -54,27 +102,6 @@ namespace uf::mt
         struct tuple_clone_type_helper<Tp, sequence<Ns...>>
         {
             using type = std::tuple<decltype(clone_something<Ns, Tp>())...>;
-        };
-
-        template<typename SCur, typename S, typename Sf, auto... Ns>
-        struct seq_remove_helper;
-
-        template<auto... SCurArgs, auto SArg, auto... SArgs, auto... Ns>
-        struct seq_remove_helper<sequence<SCurArgs...>, sequence<SArg, SArgs...>, enif<((SArg == Ns) || ...)>, Ns...>
-        {
-            using type = typename seq_remove_helper<sequence<SCurArgs...>, sequence<SArgs...>, sfinae, Ns...>::type;
-        };
-
-        template<auto... SCurArgs, auto SArg, auto... SArgs, auto... Ns>
-        struct seq_remove_helper<sequence<SCurArgs...>, sequence<SArg, SArgs...>, enif<((SArg != Ns) && ...)>, Ns...>
-        {
-            using type = typename seq_remove_helper<sequence<SCurArgs..., SArg>, sequence<SArgs...>, sfinae, Ns...>::type;
-        };
-
-        template<typename SCur, auto... Ns>
-        struct seq_remove_helper<SCur, sequence<>, sfinae, Ns...>
-        {
-            using type = SCur;
         };
     }
     // namespace detail
@@ -229,14 +256,120 @@ namespace uf::mt
     template<u64 N, typename Tp, typename T>
     using tuple_replace_index_t = typename tuple_replace_index<N, Tp, T>::type;
 
-    template<typename S, auto... Ns>
-    struct seq_remove
-    {
-        using type = typename detail::seq_remove_helper<sequence<>, S, sfinae, Ns...>::type;
-    };
+    template<auto N, auto... Ns>
+    struct is_npack_contain : std::bool_constant<((N == Ns) || ...)> { };
 
-    template<typename S, auto... Ns>
-    using seq_remove_t = typename seq_remove<S, Ns...>::type;
+    template<auto N, auto... Ns>
+    inline constexpr bool is_npack_contain_v = is_npack_contain<N, Ns...>::value;
+
+    template<typename Tp, typename... Ts>
+    struct is_tpack_contain : std::bool_constant<(std::is_same_v<Tp, Ts> || ...)> { };
+
+    template<typename Tp, typename... Ts>
+    inline constexpr bool is_tpack_contain_v = is_tpack_contain<Tp, Ts...>::value;
+
+    inline namespace sequence_operations
+    {
+        template<typename S1, typename S2>
+        struct seq_unite;
+
+        template<auto... Ns1, auto... Ns2>
+        struct seq_unite<sequence<Ns1...>,  sequence<Ns2...>> : type_identity<sequence<Ns1..., Ns2...>> { };
+
+        DECLARE_T2(seq_unite, typename, typename);
+
+        template<auto N, typename S>
+        struct seq_contain;
+
+        template<auto N, auto... Ns>
+        struct seq_contain<N, sequence<Ns...>> : is_npack_contain<N, Ns...> { };
+
+        DECLARE_V2(seq_contain, auto, typename);
+
+        template<typename S, auto... Ns>
+        struct seq_push_back;
+
+        template<auto... SArgs, auto... Ns>
+        struct seq_push_back<sequence<SArgs...>, Ns...> : type_identity<sequence<SArgs..., Ns...>> { };
+
+        DECLARE_T2S(seq_push_back, typename, auto...);
+
+        template<typename S, auto... Ns>
+        struct seq_push_front;
+
+        template<auto... SArgs, auto... Ns>
+        struct seq_push_front<sequence<SArgs...>, Ns...> : type_identity<sequence<Ns..., SArgs...>> { };
+
+        DECLARE_T2S(seq_push_front, typename, auto...);
+
+        template<typename S, auto... Ns>
+        using seq_push_front_t = typename seq_push_front<S, Ns...>::type;
+
+        template<u64 N, typename S>
+        struct seq_remove_front;
+
+        template<u64 N, auto Arg, auto... Args>
+        struct seq_remove_front<N, sequence<Arg, Args...>>
+        {
+            using type = typename seq_remove_front<N - 1, sequence<Args...>>::type;
+        };
+
+        template<auto... Args>
+        struct seq_remove_front<0, sequence<Args...>>
+        {
+            using type = sequence<Args...>;
+        };
+
+        DECLARE_T2(seq_remove_front, u64, typename);
+
+        template<typename S>
+        struct seq_reverse;
+
+        template<auto N, auto... Ns>
+        struct seq_reverse<sequence<N, Ns...>>
+        {
+            using type = seq_push_back_t<typename seq_reverse<sequence<Ns...>>::type, N>;
+        };
+
+        template<>
+        struct seq_reverse<sequence<>>
+        {
+            using type = sequence<>;
+        };
+
+        DECLARE_T1(seq_reverse, typename);
+
+        template<u64 N, typename S>
+        struct seq_remove_back
+        {
+            using type = seq_reverse_t<seq_remove_front_t<N, seq_reverse_t<S>>>;
+        };
+
+        DECLARE_T2(seq_remove_back, u64, typename);
+
+        template<typename S, auto... Ns>
+        struct seq_remove;
+
+        template<auto Arg, auto... Args, auto... Ns>
+        struct seq_remove<sequence<Arg, Args...>, Ns...>
+        {
+            using type = std::conditional_t<((Arg == Ns) || ...),
+                                            typename seq_remove<sequence<Args...>, Ns...>::type,
+                                            seq_push_front_t<typename seq_remove<sequence<Args...>, Ns...>::type, Arg>>;
+        };
+
+        template<auto... Ns>
+        struct seq_remove<sequence<>, Ns...> : type_identity<sequence<>> { };
+
+        DECLARE_T2S(seq_remove, typename, auto...);
+    }
+    // inline namespace sequence_operations
+
+    inline namespace tuple_operations
+    {
+
+    }
+    // inline namespace tuple_operations
 
     template<typename Tp>
     struct clean;
@@ -412,3 +545,16 @@ namespace uf::mt
 
 }
 // namespace uf::mt
+
+#undef DECLARE_V1
+#undef DECLARE_V2
+#undef DECLARE_V3
+#undef DECLARE_T1
+#undef DECLARE_T2
+#undef DECLARE_T3
+#undef DECLARE_V1S
+#undef DECLARE_V2S
+#undef DECLARE_V3S
+#undef DECLARE_T1S
+#undef DECLARE_T2S
+#undef DECLARE_T3S

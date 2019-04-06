@@ -324,4 +324,51 @@ TEST(subtuple_ref)
     assert_eq(std::get<0>(sst).a, 3);
 }
 
+TEST(tuple_for_each)
+{
+    {
+        int a = 0;
+        auto t1 = std::make_tuple(1, 2, 3);
+        auto t2 = std::make_tuple(4, 5, 6);
+        tuple_for_each([&a](auto& x, auto& y){ a += x * y; }, t1, t2);
+        assert_eq(a, 32);
+    }
+
+    {
+        struct X
+        {
+            int a;
+            X(int a) : a(a) { }
+            X(X&&) = default;
+            X(const X&){ assert(false); }
+        };
+
+        int a = 0;
+        std::tuple<X, X, X> t1 = std::make_tuple(1, 2, 3);
+        std::tuple<X, X, X> t2 = std::make_tuple(4, 5, 6);
+        tuple_for_each([&a](auto x, auto y){ a += x.a * y.a; }, std::move(t1), std::move(t2));
+        assert_eq(a, 32);
+    }
+}
+
+TEST(tuple_transform)
+{
+    {
+        struct X
+        {
+            int a;
+            X(int a) : a(a) { }
+            X(X&&) = default;
+            X(const X&){ assert(false); }
+        };
+
+        std::tuple<X, X, X> t1 = std::make_tuple(1, 2, 3);
+        std::tuple<X, X, X> t2 = std::make_tuple(4, 5, 6);
+        auto result = tuple_transform([](auto x, auto y){ return x.a * y.a; }, std::move(t1), std::move(t2));
+        assert_eq(std::get<0>(result), 4);
+        assert_eq(std::get<1>(result), 10);
+        assert_eq(std::get<2>(result), 18);
+    }
+}
+
 

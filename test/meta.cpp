@@ -6,6 +6,7 @@
 #include <memory>
 
 using namespace uf::mt;
+using namespace uf::base;
 using uf::traits;
 
 TEST(function_trait)
@@ -29,5 +30,22 @@ TEST(is_iterable)
 {
     assert_true(traits<std::vector<int>>::is_iterable);
     assert_true(traits<const std::vector<int>&>::is_iterable);
+}
+
+TEST(seq_reverse)
+{
+    assert_true((std::is_same_v<seq_reverse_t<sequence<1, 2, 3>>, seq_reverse_t<seq_reverse_t<sequence<3, 2, 1>>>>));
+    assert_true((std::is_same_v<seq_reverse_t<sequence<3, 1, 2, 3, 2, 1, 6>>, sequence<6, 1, 2, 3, 2, 1, 3>>));
+    assert_true((std::is_same_v<seq_reverse_t<sequence<3>>, sequence<3>>));
+    assert_true((std::is_same_v<seq_reverse_t<sequence<>>, sequence<>>));
+}
+
+TEST(seq_remove)
+{
+    assert_true((std::is_same_v<seq_remove_t<sequence<1, 2, 3, 4, 1, 2, 5, 2, 3, 9, 1, 2, 6, 3>, 1, 2, 3, 4, 5, 6, 9>, sequence<>>));
+    assert_true((std::is_same_v<seq_remove_t<sequence<1, 2, 3, 4, 1, 2, 5, 2, 3, 9, 1, 2, 6, 3>, 1, 2, 3, 4, 5, 6>, sequence<9>>));
+    assert_false((std::is_same_v<seq_remove_t<sequence<1, 2, 3, 4, 1, 2, 5, 2, 3, 9, 1, 2, 6, 3>, 1, 2, 3, 4, 5, 6>, sequence<9, 2>>));
+    assert_true((std::is_same_v<seq_remove_t<sequence<1>, 2, 3, 4, 5, 6>, sequence<1>>));
+    assert_true((std::is_same_v<seq_remove_t<sequence<>, 2, 3, 4, 5, 6>, sequence<>>));
 }
 

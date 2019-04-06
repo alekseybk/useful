@@ -11,46 +11,26 @@ namespace uf
             return std::make_tuple(mt::clone_something<Ns>(value)...);
         }
 
-        template<typename T, typename F, u64... Ns>
-        constexpr void tuple_for_each_helper(T&& t, F&& f, sequence<Ns...>)
+        template<u64 N, typename F, typename... Ts>
+        constexpr void tuple_for_each_helper(F&& f, Ts&&... ts)
         {
-            (std::invoke(f, std::get<Ns>(std::forward<T>(t))), ...);
+            if constexpr (N < std::tuple_size_v<mt::first_t<std::decay_t<Ts>...>>)
+            {
+                std::invoke(f, std::get<N>(std::forward<Ts>(ts))...);
+                tuple_for_each_helper<N + 1>(f, std::forward<Ts>(ts)...);
+            }
         }
 
-        template<u64 N, u64... Ns, typename Tp, typename F>
-        constexpr auto tuple_transform_only_helper2(Tp&& value, F&& f)
+        template<u64 N, typename F, typename... Ts>
+        constexpr auto tuple_transform_helper2(F&& f, Ts&&... ts)
         {
-            if constexpr (((N == Ns) || ...))
-                return std::invoke(f, std::forward<Tp>(value));
-            else
-                return u8(0);
+            return std::invoke(f, std::get<N>(std::forward<Ts>(ts))...);
         }
 
-        template<u64 N, u64... Ns, typename Tp, typename F>
-        constexpr auto tuple_transform_exclude_helper2(Tp&& value, F&& f)
+        template<typename F, typename... Ts, u64... Ns>
+        constexpr auto tuple_transform_helper(sequence<Ns...>, F&& f, Ts&&... ts)
         {
-            if constexpr (((N != Ns) && ...))
-                return std::invoke(f, std::forward<Tp>(value));
-            else
-                return u8(0);
-        }
-
-        template<typename T, typename F, u64... SArgs>
-        constexpr auto tuple_transform_helper(T&& t, F&& f, sequence<SArgs...>)
-        {
-            return std::make_tuple(std::invoke(f, std::get<SArgs>(std::forward<T>(t)))...);
-        }
-
-        template<typename T, typename F, u64... SArgs, u64... Ns>
-        constexpr auto tuple_transform_only_helper(T&& t, F&& f, sequence<SArgs...>, sequence<Ns...>)
-        {
-            return std::make_tuple(tuple_transform_only_helper2<SArgs, Ns...>(std::get<SArgs>(t), f)...);
-        }
-
-        template<typename T, typename F, u64... SArgs, u64... Ns>
-        constexpr auto tuple_transform_exclude_helper(T&& t, F&& f, sequence<SArgs...>, sequence<Ns...>)
-        {
-            return std::make_tuple(tuple_transform_exclude_helper2<SArgs, Ns...>(std::get<SArgs>(t), f)...);
+            return std::make_tuple(tuple_transform_helper2<Ns>(f, std::forward<Ts>(ts)...)...);
         }
 
         template<typename T, auto... Ns>
@@ -136,67 +116,20 @@ namespace uf
         return detail::tuple_clone_value_helper(std::forward<Tp>(value), make_sequence<N>());
     }
 
-    template<typename T, typename F>
-    constexpr void tuple_for_each(T&& t, F&& f)
+    template<typename F, typename... Ts>
+    constexpr void tuple_for_each(F&& f, Ts&&... ts)
     {
-        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>());
+        constexpr u64 size = std::tuple_size_v<std::remove_reference_t<mt::first_t<Ts...>>>;
+        static_assert (((std::tuple_size_v<std::remove_reference_t<Ts>> == size) && ...));
+        detail::tuple_for_each_helper<0>(std::forward<F>(f), std::forward<Ts>(ts)...);
     }
 
-    // TODO: duplicates <1, 1, 1>
-    template<u64... Ns, typename T, typename F>
-    constexpr void tuple_for_each_only(T&& t, F&& f)
+    template<typename F, typename... Ts>
+    constexpr auto tuple_transform(F&& f, Ts&&... ts)
     {
-        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), sequence<Ns...>());
-    }
-
-    // TODO: duplicates <1, 1, 1>
-    template<typename S, typename T, typename F>
-    constexpr void tuple_for_each_only(T&& t, F&& f)
-    {
-        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), S());
-    }
-
-    // TODO: sequence version
-    template<u64... Ns, typename T, typename F>
-    constexpr void tuple_for_each_exclude(T&& t, F&& f)
-    {
-        detail::tuple_for_each_helper(std::forward<T>(t), std::forward<F>(f), mt::seq_remove_t<make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>, Ns...>());
-    }
-
-    template<typename T, typename F>
-    constexpr auto tuple_transform(T&& t, F&& f)
-    {
-        return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>());
-    }
-
-    // TODO: duplicates <1, 1, 1>
-    template<u64... Ns, typename T, typename F>
-    constexpr auto tuple_transform_only(T&& t, F&& f)
-    {
-        if constexpr (sizeof...(Ns))
-            return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), sequence<Ns...>());
-        else
-            return tuple_clone_value<std::tuple_size_v<std::remove_reference_t<T>>>(u8(0));
-    }
-
-    // TODO: duplicates <1, 1, 1>
-    template<typename S, typename T, typename F>
-    constexpr auto tuple_transform_only(T&& t, F&& f)
-    {
-        if constexpr (S::size)
-            return tuple_transform_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), S());
-        else
-            return tuple_clone_value<std::tuple_size_v<std::remove_reference_t<T>>>(u8(0));
-    }
-
-    // TODO: sequence version
-    template<u64... Ns, typename T, typename F>
-    constexpr auto tuple_transform_exclude(T&& t, F&& f)
-    {
-        if constexpr (sizeof...(Ns))
-            return tuple_transform_exclude_helper(std::forward<T>(t), std::forward<F>(f), make_sequence<std::tuple_size_v<std::remove_reference_t<T>>>(), sequence<Ns...>());
-        else
-            return tuple_transform(std::forward<T>(t), std::forward<F>(f));
+        constexpr u64 size = std::tuple_size_v<std::remove_reference_t<mt::first_t<Ts...>>>;
+        static_assert (((std::tuple_size_v<std::remove_reference_t<Ts>> == size) && ...));
+        return detail::tuple_transform_helper(make_sequence<size>(), std::forward<F>(f), std::forward<Ts>(ts)...);
     }
 
     template<class R, class SeqContainer>
@@ -335,6 +268,8 @@ namespace uf
         else
             return detail::subtuple_helper(std::forward<T>(t), make_increasing_sequence<B, E>());
     }
+
+    // TODO: tuple clip
 
     class spinlock
     {
