@@ -1,13 +1,11 @@
 #include "testing.hpp"
 
 #include "../useful/meta.hpp"
-#include "../useful/traits.hpp"
 
 #include <memory>
 
 using namespace uf::mt;
 using namespace uf::base;
-using uf::traits;
 
 TEST(function_trait)
 {
@@ -28,8 +26,9 @@ TEST(is_iterator)
 
 TEST(is_iterable)
 {
-    assert_true(traits<std::vector<int>>::is_iterable);
-    assert_true(traits<const std::vector<int>&>::is_iterable);
+    assert_true(is_iterable_v<std::vector<int>>);
+    assert_true(is_iterable_v<const std::vector<int>&>);
+    assert_false(is_iterable_v<char>);
 }
 
 TEST(seq_reverse)

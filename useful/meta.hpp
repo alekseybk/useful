@@ -151,132 +151,54 @@ namespace uf::mt
     template<typename Tp>
     inline constexpr bool is_decayed_v = is_decayed<Tp>::value;
 
-    template<typename T, u64 N, enif<(std::tuple_size_v<T> >= N)> = sdef>
-    struct tuple_remove_last_n
-    {
-        using type = typename detail::tuple_remove_last_helper<T, constant<std::tuple_size_v<T> - N>>::type;
-    };
+    template<typename... Ts>
+    struct first;
 
-    template<typename T, u64 N>
-    using tuple_remove_last_n_t = typename tuple_remove_last_n<T, N>::type;
+    template<typename F, typename... Ts>
+    struct first<F, Ts...> : type_identity<F> { };
 
-    template<typename T>
-    struct tuple_remove_last : public tuple_remove_last_n<T, 1> { };
-
-    template<typename T>
-    using tuple_remove_last_t = typename tuple_remove_last<T>::type;
-
-    template<typename T, u64 N, enif<(std::tuple_size_v<T> >= N)> = sdef>
-    struct tuple_remove_first_n
-    {
-        using type = typename detail::tuple_remove_first_helper<T, std::integral_constant<u64, N>>::type;
-    };
-
-    template<typename T, u64 N>
-    using tuple_remove_first_n_t = typename tuple_remove_first_n<T, N>::type;
-
-    template<typename T>
-    struct tuple_remove_first : public tuple_remove_first_n<T, 1> { };
-
-    template<typename T>
-    using tuple_remove_first_t = typename tuple_remove_first<T>::type;
-
-    template<typename T, typename... Ts>
-    struct tuple_push_back;
-
-    template<typename... TArgs, typename... Ts>
-    struct tuple_push_back<std::tuple<TArgs...>, Ts...>
-    {
-        using type = std::tuple<TArgs..., Ts...>;
-    };
-
-    template<typename T, typename... Ts>
-    using tuple_push_back_t = typename tuple_push_back<T, Ts...>::type;
-
-    template<typename T, typename... Ts>
-    struct tuple_push_front;
-
-    template<typename... TArgs, typename... Ts>
-    struct tuple_push_front<std::tuple<TArgs...>, Ts...>
-    {
-        using type = std::tuple<Ts..., TArgs...>;
-    };
-
-    template<typename T, typename... Ts>
-    using tuple_push_front_t = typename tuple_push_front<T, Ts...>::type;
-
-    template<typename T1, typename T2>
-    struct tuple_concat_two;
-
-    template<typename... Ts1, typename... Ts2>
-    struct tuple_concat_two<std::tuple<Ts1...>, std::tuple<Ts2...>>
-    {
-        using type = std::tuple<Ts1..., Ts2...>;
-    };
+    DECLARE_T1S(first, typename...);
 
     template<typename... Ts>
-    using tuple_concat_two_t = typename tuple_concat_two<Ts...>::type;
+    struct last : type_identity<typename decltype((type_identity<Ts>{ }, ...))::type> { };
 
-    template<typename... Ts>
-    struct tuple_concat;
-
-    template<typename... Ts>
-    struct tuple_concat<std::tuple<Ts...>>
-    {
-        using type = std::tuple<Ts...>;
-    };
-
-    template<typename T1, typename T2, typename... Ts>
-    struct tuple_concat<T1, T2, Ts...>
-    {
-        using type = typename tuple_concat<tuple_concat_two<T1, T2>, Ts...>::type;
-    };
-
-    template<typename... Ts>
-    using tuple_concat_t = typename tuple_concat<Ts...>::type;
-
-    template<typename Tp, auto N>
-    struct tuple_clone_type
-    {
-        using type = typename detail::tuple_clone_type_helper<Tp, make_sequence<N>>::type;
-    };
-
-    template<typename Tp, u64 N>
-    using tuple_clone_type_t = typename tuple_clone_type<Tp, N>::type;
-
-    template<u64 N, typename Tp, typename T>
-    struct tuple_replace_index;
-
-    template<u64 N, typename Tp, typename... Ts>
-    struct tuple_replace_index<N, Tp, std::tuple<Ts...>>
-    {
-        using type = tuple_concat_t<tuple_from_seq_t<make_increasing_sequence<0, N>, Ts...>, std::tuple<Tp>, tuple_from_seq_t<make_increasing_sequence<N + 1, sizeof...(Ts)>, Ts...>>;
-    };
-
-    template<u64 N, typename Tp, typename T>
-    using tuple_replace_index_t = typename tuple_replace_index<N, Tp, T>::type;
+    DECLARE_T1S(last, typename...);
 
     template<auto N, auto... Ns>
     struct is_npack_contain : std::bool_constant<((N == Ns) || ...)> { };
 
-    template<auto N, auto... Ns>
-    inline constexpr bool is_npack_contain_v = is_npack_contain<N, Ns...>::value;
+    DECLARE_V2S(is_npack_contain, auto, auto...);
 
     template<typename Tp, typename... Ts>
     struct is_tpack_contain : std::bool_constant<(std::is_same_v<Tp, Ts> || ...)> { };
 
-    template<typename Tp, typename... Ts>
-    inline constexpr bool is_tpack_contain_v = is_tpack_contain<Tp, Ts...>::value;
+    DECLARE_V2S(is_tpack_contain, typename, typename...);
+
+    template<typename... Ts>
+    struct is_tpack_same : std::bool_constant<(std::is_same_v<first_t<Ts...>, Ts> && ...)> { };
+
+    DECLARE_V1S(is_tpack_same, typename...);
+
+    template<auto... Ns>
+    struct is_npack_same : std::bool_constant<((sequence<Ns...>::template value<0> == Ns) && ...)> { };
+
+    DECLARE_V1S(is_npack_same, auto...);
 
     inline namespace sequence_operations
     {
-        template<typename S1, typename S2>
-        struct seq_unite;
+        template<typename... Ts>
+        struct seq_concat;
 
-        template<auto... Ns1, auto... Ns2>
-        struct seq_unite<sequence<Ns1...>,  sequence<Ns2...>> : type_identity<sequence<Ns1..., Ns2...>> { };
+        template<>
+        struct seq_concat<> : type_identity<sequence<>> { };
 
-        DECLARE_T2(seq_unite, typename, typename);
+        template<auto... Ns>
+        struct seq_concat<sequence<Ns...>> : type_identity<sequence<Ns...>> { };
+
+        template<auto... Ns1, auto... Ns2, typename... Ts>
+        struct seq_concat<sequence<Ns1...>,  sequence<Ns2...>, Ts...> : seq_concat<sequence<Ns1..., Ns2...>, Ts...> { };
+
+        DECLARE_T1S(seq_concat, typename...);
 
         template<auto N, typename S>
         struct seq_contain;
@@ -367,7 +289,95 @@ namespace uf::mt
 
     inline namespace tuple_operations
     {
+        template<typename... Ts>
+        struct tuple_concat;
 
+        template<>
+        struct tuple_concat<> : type_identity<std::tuple<>> { };
+
+        template<typename... Ts>
+        struct tuple_concat<std::tuple<Ts...>> : type_identity<std::tuple<Ts...>> { };
+
+        template<typename... Ts1, typename... Ts2, typename... Ts>
+        struct tuple_concat<std::tuple<Ts1...>, std::tuple<Ts2...>, Ts...> : tuple_concat<std::tuple<Ts1..., Ts2...>, Ts...> { };
+
+        DECLARE_T1S(tuple_concat, typename...);
+
+        // TODO: try to remove helpers
+        template<typename T, u64 N, enif<(std::tuple_size_v<T> >= N)> = sdef>
+        struct tuple_remove_last_n
+        {
+            using type = typename detail::tuple_remove_last_helper<T, constant<std::tuple_size_v<T> - N>>::type;
+        };
+
+        template<typename T, u64 N>
+        using tuple_remove_last_n_t = typename tuple_remove_last_n<T, N>::type;
+
+        template<typename T>
+        struct tuple_remove_last : public tuple_remove_last_n<T, 1> { };
+
+        template<typename T>
+        using tuple_remove_last_t = typename tuple_remove_last<T>::type;
+
+        template<typename T, u64 N, enif<(std::tuple_size_v<T> >= N)> = sdef>
+        struct tuple_remove_first_n
+        {
+            using type = typename detail::tuple_remove_first_helper<T, std::integral_constant<u64, N>>::type;
+        };
+
+        template<typename T, u64 N>
+        using tuple_remove_first_n_t = typename tuple_remove_first_n<T, N>::type;
+
+        template<typename T>
+        struct tuple_remove_first : public tuple_remove_first_n<T, 1> { };
+
+        template<typename T>
+        using tuple_remove_first_t = typename tuple_remove_first<T>::type;
+
+        template<typename T, typename... Ts>
+        struct tuple_push_back;
+
+        template<typename... TArgs, typename... Ts>
+        struct tuple_push_back<std::tuple<TArgs...>, Ts...>
+        {
+            using type = std::tuple<TArgs..., Ts...>;
+        };
+
+        template<typename T, typename... Ts>
+        using tuple_push_back_t = typename tuple_push_back<T, Ts...>::type;
+
+        template<typename T, typename... Ts>
+        struct tuple_push_front;
+
+        template<typename... TArgs, typename... Ts>
+        struct tuple_push_front<std::tuple<TArgs...>, Ts...>
+        {
+            using type = std::tuple<Ts..., TArgs...>;
+        };
+
+        template<typename T, typename... Ts>
+        using tuple_push_front_t = typename tuple_push_front<T, Ts...>::type;
+
+        template<typename Tp, auto N>
+        struct tuple_clone_type
+        {
+            using type = typename detail::tuple_clone_type_helper<Tp, make_sequence<N>>::type;
+        };
+
+        template<typename Tp, u64 N>
+        using tuple_clone_type_t = typename tuple_clone_type<Tp, N>::type;
+
+        template<u64 N, typename Tp, typename T>
+        struct tuple_replace_index;
+
+        template<u64 N, typename Tp, typename... Ts>
+        struct tuple_replace_index<N, Tp, std::tuple<Ts...>>
+        {
+            using type = tuple_concat_t<tuple_from_seq_t<make_increasing_sequence<0, N>, Ts...>, std::tuple<Tp>, tuple_from_seq_t<make_increasing_sequence<N + 1, sizeof...(Ts)>, Ts...>>;
+        };
+
+        template<u64 N, typename Tp, typename T>
+        using tuple_replace_index_t = typename tuple_replace_index<N, Tp, T>::type;
     }
     // inline namespace tuple_operations
 
@@ -399,22 +409,20 @@ namespace uf::mt
     using clean_copy_args_t = typename clean_copy_args<Clean, Tp>::type;
 
     template<typename Tp>
-    struct is_template : public std::false_type { };
+    struct is_instantiated : public std::false_type { };
 
     template<template<typename...> typename Tp, typename... Ts>
-    struct is_template<Tp<Ts...>> : public std::true_type { };
+    struct is_instantiated<Tp<Ts...>> : public std::true_type { };
 
-    template<typename Tp>
-    inline constexpr bool is_template_v = is_template<Tp>::value;
+    DECLARE_V1(is_instantiated, typename);
 
     template<typename A, typename B>
-    struct is_same_template : public std::false_type { };
+    struct is_instantiated_from_same : std::false_type { };
 
     template<template<typename...> typename Tp, typename... A, typename... B>
-    struct is_same_template<Tp<A...>, Tp<B...>> : public std::true_type { };
+    struct is_instantiated_from_same<Tp<A...>, Tp<B...>> : std::true_type { };
 
-    template<typename A, typename B>
-    inline constexpr bool is_same_template_v = is_same_template<A, B>::value;
+    DECLARE_V2(is_instantiated_from_same, typename, typename);
 
     template<template<typename...> typename Expected, typename Tested>
     struct is_instantiated_from : public std::false_type { };
@@ -422,26 +430,7 @@ namespace uf::mt
     template<template<typename...> typename Expected, typename... Ts>
     struct is_instantiated_from<Expected, Expected<Ts...>> : public std::true_type { };
 
-    template<template<typename...> typename Expected, typename Tested>
-    inline constexpr bool is_instantiated_from_v =  is_instantiated_from<Expected, Tested>::value;
-
-    template<typename... Ts>
-    struct first;
-
-    template<typename F, typename... Ts>
-    struct first<F, Ts...> : public type_identity<F> { };
-
-    template<typename... Ts>
-    using first_t = typename first<Ts...>::type;
-
-    template<typename... Ts>
-    struct last
-    {
-        using type = typename decltype((type_identity<Ts>{ }, ...))::type;
-    };
-
-    template<typename... Ts>
-    using last_t = typename last<Ts...>::type;
+    DECLARE_V2(is_instantiated_from, template<typename...> typename, typename);
 
     template<class F>
     struct function_trait;
@@ -466,18 +455,6 @@ namespace uf::mt
     template<class C, class R, class... Args>
     struct function_trait<R(C::*)(Args...)> : public function_trait<R(Args...)> { };
 
-    template<typename... Ts>
-    struct is_same_all : public std::bool_constant<(std::is_same_v<first_t<Ts...>, Ts> && ...)> { };
-
-    template<typename... Ts>
-    inline constexpr bool is_same_all_v = is_same_all<Ts...>::value;
-
-    template<typename Tp, typename... Ts>
-    struct is_one_of : public std::bool_constant<(std::is_same_v<Tp, Ts> || ...)> { };
-
-    template<typename Tp, typename... Ts>
-    inline constexpr bool is_one_of_v = is_one_of<Tp, Ts...>::value;
-
     // **********************************
     template<class Tp, typename = sfinae>
     struct is_iterable : public std::false_type { };
@@ -485,36 +462,37 @@ namespace uf::mt
     template<class Tp>
     struct is_iterable<Tp, sfinae_t<decltype(*std::begin(std::declval<Tp>())), decltype(std::end(std::declval<Tp>()))>> : public std::true_type { };
 
-    template<class Tp>
-    inline constexpr bool is_iterable_v = is_iterable<Tp>::value;
+    DECLARE_V1(is_iterable, typename);
 
     template<typename Tp, typename = sfinae>
-    struct is_deref : public std::false_type { };
+    struct is_dereferenceable : public std::false_type { };
 
     template<typename Tp>
-    struct is_deref<Tp, sfinae_t<decltype(*std::declval<Tp>())>> : public std::true_type { };
+    struct is_dereferenceable<Tp, sfinae_t<decltype(*std::declval<Tp>())>> : public std::true_type { };
 
-    template<class Tp>
-    inline constexpr bool is_deref_v = is_deref<Tp>::value;
+    DECLARE_V1(is_dereferenceable, typename);
 
     // **********************************
+    template<typename S>
+    struct is_sequence : std::false_type { };
+
+    template<auto... Ns>
+    struct is_sequence<sequence<Ns...>> : std::true_type { };
+
+    DECLARE_V1(is_sequence, typename);
+
     template<typename S>
     struct is_positive_sequence : std::false_type { };
 
     template<auto... Ns>
     struct is_positive_sequence<sequence<Ns...>> : public std::bool_constant<((Ns >= 0) && ...)> { };
 
-    template<typename S>
-    inline constexpr bool is_positive_sequence_v = is_positive_sequence<S>::value;
+    DECLARE_V1(is_positive_sequence, typename);
 
     template<typename Tp>
-    struct is_smart_pointer
-    {
-        static const bool value = is_instantiated_from_v<std::unique_ptr, Tp> || is_instantiated_from_v<std::shared_ptr, Tp> || is_instantiated_from_v<std::weak_ptr, Tp>;
-    };
+    struct is_smart_pointer : std::bool_constant<is_instantiated_from_v<std::unique_ptr, Tp> || is_instantiated_from_v<std::shared_ptr, Tp> || is_instantiated_from_v<std::weak_ptr, Tp>> { };
 
-    template<class Tp>
-    inline constexpr bool is_smart_pointer_v = is_smart_pointer<Tp>::value;
+    DECLARE_V1(is_smart_pointer, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_iterator : public std::false_type { };
@@ -522,8 +500,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_iterator<Tp, sfinae_t<typename std::iterator_traits<Tp>::iterator_category>> : public std::true_type { };
 
-    template<typename Tp, typename = sfinae>
-    inline constexpr bool is_iterator_v = is_iterator<Tp>::value;
+    DECLARE_V1(is_iterator, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_random_access_iterator : public std::false_type { };
@@ -531,8 +508,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_random_access_iterator<Tp, enif<std::is_same_v<typename std::iterator_traits<Tp>::iterator_category, std::random_access_iterator_tag>>> : public std::true_type { };
 
-    template<typename Tp>
-    inline constexpr bool is_random_access_iterator_v = is_random_access_iterator<Tp>::value;
+    DECLARE_V1(is_random_access_iterator, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_random_access_container : std::false_type { };
@@ -540,9 +516,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_random_access_container<Tp, enif<is_iterable_v<Tp>>> : public is_random_access_iterator<typename std::remove_reference_t<Tp>::iterator> { };
 
-    template<typename Tp>
-    inline constexpr bool is_random_access_container_v = is_random_access_container<Tp>::value;
-
+    DECLARE_V1(is_random_access_container, typename);
 }
 // namespace uf::mt
 
