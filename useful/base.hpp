@@ -7,7 +7,7 @@
 namespace uf
 {
     inline namespace base
-    {
+    {      
         inline namespace sized
         {
             using u8 = std::uint8_t;
@@ -22,6 +22,7 @@ namespace uf
             using u64 = std::uint64_t;
             using i64 = std::int64_t;
         }
+        // inline namespace sized
 
         enum class sfinae;
         inline constexpr sfinae sdef{0};
@@ -40,9 +41,6 @@ namespace uf
         {
             using type = Tp;
         };
-
-        template<typename Tp>
-        using type_identity_t = typename type_identity<Tp>::type;
 
         template<auto N>
         using constant = std::integral_constant<decltype(N), N>;
@@ -64,57 +62,7 @@ namespace uf
             template<typename Tp>
             using cast_std = std::integer_sequence<Tp, Ns...>;
         };
-
-        namespace detail
-        {
-            template<auto B, auto E, auto... Ns>
-            struct increasing_sequence_helper
-            {
-                using type = typename increasing_sequence_helper<B + 1, E, Ns..., B>::type;
-            };
-
-            template<auto E, auto... Ns>
-            struct increasing_sequence_helper<E, E, Ns...>
-            {
-                using type = sequence<Ns...>;
-            };
-
-            template<auto B, auto E, auto... Ns>
-            struct decreasing_sequence_helper
-            {
-                using type = typename decreasing_sequence_helper<B - 1, E, Ns..., B>::type;
-            };
-
-            template<auto E, auto... Ns>
-            struct decreasing_sequence_helper<E, E, Ns...>
-            {
-                using type = sequence<Ns..., E>;
-            };
-        }
-
-        template<auto B, auto E>
-        struct increasing_sequence
-        {
-            static_assert(B <= E);
-            using type = typename detail::increasing_sequence_helper<B, E>::type;
-        };
-
-        template<auto B, auto E>
-        struct decreasing_sequence
-        {
-            static_assert(B >= E);
-            using type = typename detail::decreasing_sequence_helper<B, E>::type;
-        };
-
-        template<auto B, auto E>
-        using make_increasing_sequence = typename increasing_sequence<B, E>::type;
-
-        template<auto B, auto E>
-        using make_decreasing_sequence = typename decreasing_sequence<B, E>::type;
-
-        template<auto N>
-        using make_sequence = make_increasing_sequence<u64(0), u64(N)>;
     }
-    // namespace base
+    // inline namespace base
 }
 // namespace uf

@@ -7,13 +7,13 @@
 using namespace uf::mt;
 using namespace uf::base;
 
-TEST(function_trait)
+TEST(function_info)
 {
     struct X { int f(double, char); };
-    assert_eq(function_trait<decltype(&X::f)>::arity, 2);
-    assert_true((std::is_same_v<function_trait<decltype(&X::f)>::result, int>));
-    assert_true((std::is_same_v<function_trait<decltype(&X::f)>::nth<0>, double>));
-    assert_true((std::is_same_v<function_trait<decltype(&X::f)>::nth<1>, char>));
+    assert_eq(function_info<decltype(&X::f)>::arity, 2);
+    assert_true((std::is_same_v<function_info<decltype(&X::f)>::result, int>));
+    assert_true((std::is_same_v<function_info<decltype(&X::f)>::nth<0>, double>));
+    assert_true((std::is_same_v<function_info<decltype(&X::f)>::nth<1>, char>));
 }
 
 TEST(is_iterator)

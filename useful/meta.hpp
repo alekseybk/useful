@@ -70,37 +70,9 @@ namespace uf::mt
     constexpr Tp clone_something();
 
     template<typename Tp>
-    struct is_tuple : public std::false_type { };
+    struct is_decayed : std::bool_constant<!std::is_const_v<Tp> && !std::is_volatile_v<Tp> && !std::is_reference_v<Tp>> { };
 
-    template<typename... Ts>
-    struct is_tuple<std::tuple<Ts...>> : public std::true_type { };
-
-    template<typename Tp>
-    inline constexpr bool is_tuple_v = is_tuple<Tp>::value;
-
-    template<typename Tp>
-    struct is_pair : public std::false_type { };
-
-    template<typename F, typename S>
-    struct is_pair<std::pair<F, S>> : public std::true_type { };
-
-    template<typename Tp>
-    inline constexpr bool is_pair_v = is_pair<Tp>::value;
-
-    template<typename Tp>
-    inline constexpr bool is_multi_v = is_pair_v<Tp> || is_tuple_v<Tp>;
-
-    template<typename Tp>
-    inline constexpr bool is_single_v = !is_multi_v<Tp>;
-
-    template<typename Tp, typename Sf = sfinae>
-    struct is_decayed : public std::false_type { };
-
-    template<typename Tp>
-    struct is_decayed<Tp, disif<std::is_const_v<Tp> || std::is_volatile_v<Tp> || std::is_reference_v<Tp>>> : public std::true_type { };
-
-    template<typename Tp>
-    inline constexpr bool is_decayed_v = is_decayed<Tp>::value;
+    DECLARE_V1(is_decayed, typename);
 
     template<typename F, typename... Ts>
     struct tpack_first : type_identity<F> { };
@@ -219,10 +191,34 @@ namespace uf::mt
 
         DECLARE_T1(seq_reverse, typename);
 
+        template<auto B, auto E>
+        struct seq_increasing
+        {
+            static_assert (B < E);
+            using type = seq_concat_t<sequence<B>, typename seq_increasing<B + 1, E>::type>;
+        };
+
+        template<auto E>
+        struct seq_increasing<E, E> : type_identity<sequence<>> { };
+
+        template<u64 N>
+        using make_sequence = typename seq_increasing<u64(0), u64(N)>::type;
+
+        DECLARE_T2(seq_increasing, auto, auto);
+
+        template<auto B, auto E>
+        struct seq_decreasing
+        {
+            static_assert (i64(B) >= i64(E - 1));
+            using type = seq_reverse_t<seq_increasing_t<E, B + 1>>;
+        };
+
+        DECLARE_T2(seq_decreasing, auto, auto);
+
         template<typename S, u64 N>
         struct seq_remove_front
         {
-            using type = seq_select_seq_t<S, make_increasing_sequence<N, S::size>>;
+            using type = seq_select_seq_t<S, seq_increasing_t<N, S::size>>;
         };
 
         DECLARE_T2(seq_remove_front, typename, u64);
@@ -333,7 +329,7 @@ namespace uf::mt
         template<typename T, u64 N>
         struct tuple_remove_front
         {
-            using type = tuple_select_seq_t<T, make_increasing_sequence<N, std::tuple_size_v<T>>>;
+            using type = tuple_select_seq_t<T, seq_increasing_t<N, std::tuple_size_v<T>>>;
         };
 
         DECLARE_T2(tuple_remove_front, typename, u64);
@@ -364,34 +360,6 @@ namespace uf::mt
     }
     // inline namespace tuple_operations
 
-    // TODO: refactoring
-    template<typename Tp>
-    struct clean;
-
-    template<template<typename...> typename Tp, typename... Ts>
-    struct clean<Tp<Ts...>>
-    {
-        static constexpr u64 args = sizeof...(Ts);
-
-        template<typename... Ts_>
-        using type = Tp<Ts_...>;
-
-        template<u64 N>
-        using nth = std::tuple_element_t<N, std::tuple<Ts...>>;
-    };
-
-    template<typename Tp, typename... Ts>
-    using clean_t = typename clean<Tp>::template type<Ts...>;
-
-    template<template<typename...> typename Clean, typename Tp>
-    struct clean_copy_args;
-
-    template<template<typename...> typename Clean, template<typename...> typename Tp, typename... Ts>
-    struct clean_copy_args<Clean, Tp<Ts...>> : public type_identity<Clean<Ts...>> { };
-
-    template<template<typename...> typename Clean, typename Tp>
-    using clean_copy_args_t = typename clean_copy_args<Clean, Tp>::type;
-
     template<typename Tp>
     struct is_instantiated : public std::false_type { };
 
@@ -416,11 +384,34 @@ namespace uf::mt
 
     DECLARE_V2(is_instantiated_from, template<typename...> typename, typename);
 
+    template<typename Tp>
+    struct instance_info;
+
+    template<template<typename...> typename Tp, typename... Ts>
+    struct instance_info<Tp<Ts...>>
+    {
+        static constexpr u64 args = sizeof...(Ts);
+
+        template<typename... Ts_>
+        using type = Tp<Ts_...>;
+
+        template<u64 N>
+        using nth = std::tuple_element_t<N, std::tuple<Ts...>>;
+    };
+
+    template<template<typename...> typename Template, typename T>
+    struct instance_from_tuple;
+
+    template<template<typename...> typename Template, typename... Ts>
+    struct instance_from_tuple<Template, std::tuple<Ts...>> : type_identity<Template<Ts...>> { };
+
+    DECLARE_T2(instance_from_tuple, template<typename...> typename, typename);
+
     template<class F>
-    struct function_trait;
+    struct function_info;
 
     template<class R, class... Args>
-    struct function_trait<R(Args...)>
+    struct function_info<R(Args...)>
     {
         static constexpr u64 arity = sizeof...(Args);
 
@@ -431,13 +422,13 @@ namespace uf::mt
     };
 
     template<class R, class... Args>
-    struct function_trait<std::function<R(Args...)>> : public function_trait<R(Args...)> { };
+    struct function_info<std::function<R(Args...)>> : public function_info<R(Args...)> { };
 
     template<class R, class... Args>
-    struct function_trait<R(*)(Args...)> : public function_trait<R(Args...)> { };
+    struct function_info<R(*)(Args...)> : public function_info<R(Args...)> { };
 
     template<class C, class R, class... Args>
-    struct function_trait<R(C::*)(Args...)> : public function_trait<R(Args...)> { };
+    struct function_info<R(C::*)(Args...)> : public function_info<R(Args...)> { };
 
     // **********************************
     template<class Tp, typename = sfinae>
@@ -503,6 +494,12 @@ namespace uf::mt
     DECLARE_V1(is_random_access_container, typename);
 }
 // namespace uf::mt
+
+namespace uf
+{
+    using mt::make_sequence;
+}
+// namespace uf
 
 #undef DECLARE_V1
 #undef DECLARE_V2

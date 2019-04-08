@@ -148,7 +148,7 @@ namespace uf
     {
         using decayed = std::decay_t<SeqContainer>;
         using value_type = typename decayed::value_type;
-        using result_type = typename mt::clean<decayed>::template type<std::pair<u64, value_type>>;
+        using result_type = typename mt::instance_info<decayed>::template type<std::pair<u64, value_type>>;
 
         return add_positions<result_type>(x);
     }
@@ -254,9 +254,9 @@ namespace uf
     {
         constexpr u64 size = std::tuple_size_v<std::remove_reference_t<T>>;
         if constexpr (E > size)
-            return detail::subtuple_ref_helper(std::forward<T>(t), make_increasing_sequence<B, size>());
+            return detail::subtuple_ref_helper(std::forward<T>(t), mt::seq_increasing_t<B, size>());
         else
-            return detail::subtuple_ref_helper(std::forward<T>(t), make_increasing_sequence<B, E>());
+            return detail::subtuple_ref_helper(std::forward<T>(t), mt::seq_increasing_t<B, E>());
     }
 
     template<u64 B = 0, u64 E = std::numeric_limits<u64>::max(), typename T>
@@ -264,9 +264,9 @@ namespace uf
     {
         constexpr u64 size = std::tuple_size_v<std::remove_reference_t<T>>;
         if constexpr (E > size)
-            return detail::subtuple_helper(std::forward<T>(t), make_increasing_sequence<B, size>());
+            return detail::subtuple_helper(std::forward<T>(t), mt::seq_increasing_t<B, size>());
         else
-            return detail::subtuple_helper(std::forward<T>(t), make_increasing_sequence<B, E>());
+            return detail::subtuple_helper(std::forward<T>(t), mt::seq_increasing_t<B, E>());
     }
 
     // TODO: tuple clip
