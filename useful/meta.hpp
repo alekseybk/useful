@@ -69,43 +69,6 @@ namespace uf::mt
     template<auto, typename Tp>
     constexpr Tp clone_something();
 
-    namespace detail
-    {
-        template<typename T, typename N, typename... Ts>
-        struct tuple_remove_last_helper
-        {
-            using type = typename tuple_remove_last_helper<T, constant<N::value - 1>, std::tuple_element_t<N::value - 1, T>, Ts...>::type;
-        };
-
-        template<typename T, typename... Ts>
-        struct tuple_remove_last_helper<T, constant<0>, Ts...>
-        {
-            using type = std::tuple<Ts...>;
-        };
-
-        template<typename T, typename N, typename... Ts>
-        struct tuple_remove_first_helper
-        {
-            using type = typename tuple_remove_first_helper<T, constant<N::value + 1>, Ts..., std::tuple_element_t<N::value, T>>::type;
-        };
-
-        template<typename T, typename... Ts>
-        struct tuple_remove_first_helper<T, constant<std::tuple_size_v<T>>, Ts...>
-        {
-            using type = std::tuple<Ts...>;
-        };
-
-        template<typename Tp, typename S>
-        struct tuple_clone_type_helper;
-
-        template<typename Tp, auto... Ns>
-        struct tuple_clone_type_helper<Tp, sequence<Ns...>>
-        {
-            using type = std::tuple<decltype(clone_something<Ns, Tp>())...>;
-        };
-    }
-    // namespace detail
-
     template<typename S, typename... Ts>
     struct tuple_from_seq;
 
@@ -186,6 +149,27 @@ namespace uf::mt
 
     inline namespace sequence_operations
     {
+        template<typename S, u64... Ns>
+        struct seq_select : type_identity<sequence<S::template get<Ns>()...>> { };
+
+        DECLARE_T2S(seq_select, typename, u64...);
+
+        template<typename S1, typename S2>
+        struct seq_select_seq;
+
+        template<typename S1, auto... Ns>
+        struct seq_select_seq<S1, sequence<Ns...>> : seq_select<S1, Ns...> { };
+
+        DECLARE_T2(seq_select_seq, typename, typename);
+
+        template<typename S, auto N>
+        struct is_seq_contain;
+
+        template<auto... Ns, auto N>
+        struct is_seq_contain<sequence<Ns...>, N> : is_npack_contain<N, Ns...> { };
+
+        DECLARE_V2(is_seq_contain, typename, auto);
+
         template<typename... Ts>
         struct seq_concat;
 
@@ -199,14 +183,6 @@ namespace uf::mt
         struct seq_concat<sequence<Ns1...>,  sequence<Ns2...>, Ts...> : seq_concat<sequence<Ns1..., Ns2...>, Ts...> { };
 
         DECLARE_T1S(seq_concat, typename...);
-
-        template<auto N, typename S>
-        struct seq_contain;
-
-        template<auto N, auto... Ns>
-        struct seq_contain<N, sequence<Ns...>> : is_npack_contain<N, Ns...> { };
-
-        DECLARE_V2(seq_contain, auto, typename);
 
         template<typename S, auto... Ns>
         struct seq_push_back;
@@ -224,26 +200,6 @@ namespace uf::mt
 
         DECLARE_T2S(seq_push_front, typename, auto...);
 
-        template<typename S, auto... Ns>
-        using seq_push_front_t = typename seq_push_front<S, Ns...>::type;
-
-        template<u64 N, typename S>
-        struct seq_remove_front;
-
-        template<u64 N, auto Arg, auto... Args>
-        struct seq_remove_front<N, sequence<Arg, Args...>>
-        {
-            using type = typename seq_remove_front<N - 1, sequence<Args...>>::type;
-        };
-
-        template<auto... Args>
-        struct seq_remove_front<0, sequence<Args...>>
-        {
-            using type = sequence<Args...>;
-        };
-
-        DECLARE_T2(seq_remove_front, u64, typename);
-
         template<typename S>
         struct seq_reverse;
 
@@ -254,20 +210,25 @@ namespace uf::mt
         };
 
         template<>
-        struct seq_reverse<sequence<>>
-        {
-            using type = sequence<>;
-        };
+        struct seq_reverse<sequence<>> : type_identity<sequence<>> { };
 
         DECLARE_T1(seq_reverse, typename);
 
-        template<u64 N, typename S>
-        struct seq_remove_back
+        template<typename S, u64 N>
+        struct seq_remove_front
         {
-            using type = seq_reverse_t<seq_remove_front_t<N, seq_reverse_t<S>>>;
+            using type = seq_select_seq_t<S, make_increasing_sequence<N, S::size>>;
         };
 
-        DECLARE_T2(seq_remove_back, u64, typename);
+        DECLARE_T2(seq_remove_front, typename, u64);
+
+        template<typename S, u64 N>
+        struct seq_remove_back
+        {
+            using type = seq_select_seq_t<S, make_sequence<S::size - N>>;
+        };
+
+        DECLARE_T2(seq_remove_back, typename, u64);
 
         template<typename S, auto... Ns>
         struct seq_remove;
@@ -289,6 +250,27 @@ namespace uf::mt
 
     inline namespace tuple_operations
     {
+        template<typename T, u64... Ns>
+        struct tuple_select : type_identity<std::tuple<std::tuple_element_t<Ns, T>...>> { };
+
+        DECLARE_T2S(tuple_select, typename, u64...);
+
+        template<typename T, typename S>
+        struct tuple_select_seq;
+
+        template<typename T, auto... Ns>
+        struct tuple_select_seq<T, sequence<Ns...>> : tuple_select<T, Ns...> { };
+
+        DECLARE_T2(tuple_select_seq, typename, typename);
+
+        template<typename T, typename Tp>
+        struct is_tuple_contain;
+
+        template<typename... Ts, typename Tp>
+        struct is_tuple_contain<std::tuple<Ts...>, Tp> : is_tpack_contain<Tp, Ts...> { };
+
+        DECLARE_V2(is_tuple_contain, typename, typename);
+
         template<typename... Ts>
         struct tuple_concat;
 
@@ -303,48 +285,13 @@ namespace uf::mt
 
         DECLARE_T1S(tuple_concat, typename...);
 
-        // TODO: try to remove helpers
-        template<typename T, u64 N, enif<(std::tuple_size_v<T> >= N)> = sdef>
-        struct tuple_remove_last_n
-        {
-            using type = typename detail::tuple_remove_last_helper<T, constant<std::tuple_size_v<T> - N>>::type;
-        };
-
-        template<typename T, u64 N>
-        using tuple_remove_last_n_t = typename tuple_remove_last_n<T, N>::type;
-
-        template<typename T>
-        struct tuple_remove_last : public tuple_remove_last_n<T, 1> { };
-
-        template<typename T>
-        using tuple_remove_last_t = typename tuple_remove_last<T>::type;
-
-        template<typename T, u64 N, enif<(std::tuple_size_v<T> >= N)> = sdef>
-        struct tuple_remove_first_n
-        {
-            using type = typename detail::tuple_remove_first_helper<T, std::integral_constant<u64, N>>::type;
-        };
-
-        template<typename T, u64 N>
-        using tuple_remove_first_n_t = typename tuple_remove_first_n<T, N>::type;
-
-        template<typename T>
-        struct tuple_remove_first : public tuple_remove_first_n<T, 1> { };
-
-        template<typename T>
-        using tuple_remove_first_t = typename tuple_remove_first<T>::type;
-
         template<typename T, typename... Ts>
         struct tuple_push_back;
 
         template<typename... TArgs, typename... Ts>
-        struct tuple_push_back<std::tuple<TArgs...>, Ts...>
-        {
-            using type = std::tuple<TArgs..., Ts...>;
-        };
+        struct tuple_push_back<std::tuple<TArgs...>, Ts...> : type_identity<std::tuple<TArgs..., Ts...>> { };
 
-        template<typename T, typename... Ts>
-        using tuple_push_back_t = typename tuple_push_back<T, Ts...>::type;
+        DECLARE_T2S(tuple_push_back, typename, typename...);
 
         template<typename T, typename... Ts>
         struct tuple_push_front;
@@ -355,32 +302,55 @@ namespace uf::mt
             using type = std::tuple<Ts..., TArgs...>;
         };
 
+        DECLARE_T2S(tuple_push_front, typename, typename...);
+
+        template<typename T>
+        struct tuple_reverse;
+
+        template<typename T1, typename... Ts>
+        struct tuple_reverse<std::tuple<T1, Ts...>>
+        {
+            using type = tuple_push_back_t<typename tuple_reverse<std::tuple<Ts...>>::type, T1>;
+        };
+
+        DECLARE_T1(tuple_reverse, typename);
+
+        template<typename T, u64 N>
+        struct tuple_remove_front
+        {
+            using type = tuple_select_seq_t<T, make_increasing_sequence<N, std::tuple_size_v<T>>>;
+        };
+
+        DECLARE_T2(tuple_remove_front, typename, u64);
+
+        template<typename T, u64 N>
+        struct tuple_remove_back
+        {
+            using type = tuple_select_seq_t<T, make_sequence<std::tuple_size_v<T> - N>>;
+        };
+
+        DECLARE_T2(tuple_remove_back, typename, u64);
+
         template<typename T, typename... Ts>
-        using tuple_push_front_t = typename tuple_push_front<T, Ts...>::type;
+        struct tuple_remove;
 
-        template<typename Tp, auto N>
-        struct tuple_clone_type
+        template<typename Arg, typename... Args, typename... Ts>
+        struct tuple_remove<std::tuple<Arg, Args...>, Ts...>
         {
-            using type = typename detail::tuple_clone_type_helper<Tp, make_sequence<N>>::type;
+            using type = std::conditional_t<((std::is_same_v<Arg, Ts>) || ...),
+                                            typename tuple_remove<std::tuple<Args...>, Ts...>::type,
+                                            tuple_push_front_t<typename tuple_remove<std::tuple<Args...>, Ts...>::type, Arg>>;
         };
 
-        template<typename Tp, u64 N>
-        using tuple_clone_type_t = typename tuple_clone_type<Tp, N>::type;
+        template<typename... Ts>
+        struct tuple_remove<std::tuple<>, Ts...> : type_identity<std::tuple<>> { };
 
-        template<u64 N, typename Tp, typename T>
-        struct tuple_replace_index;
-
-        template<u64 N, typename Tp, typename... Ts>
-        struct tuple_replace_index<N, Tp, std::tuple<Ts...>>
-        {
-            using type = tuple_concat_t<tuple_from_seq_t<make_increasing_sequence<0, N>, Ts...>, std::tuple<Tp>, tuple_from_seq_t<make_increasing_sequence<N + 1, sizeof...(Ts)>, Ts...>>;
-        };
-
-        template<u64 N, typename Tp, typename T>
-        using tuple_replace_index_t = typename tuple_replace_index<N, Tp, T>::type;
+        DECLARE_T2S(tuple_remove, typename, typename...);
     }
     // inline namespace tuple_operations
 
+
+    // TODO: refactoring
     template<typename Tp>
     struct clean;
 
