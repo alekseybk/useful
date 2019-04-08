@@ -14,7 +14,7 @@ namespace uf
         template<u64 N, typename F, typename... Ts>
         constexpr void tuple_for_each_helper(F&& f, Ts&&... ts)
         {
-            if constexpr (N < std::tuple_size_v<mt::first_t<std::decay_t<Ts>...>>)
+            if constexpr (N < std::tuple_size_v<mt::tpack_first_t<std::decay_t<Ts>...>>)
             {
                 std::invoke(f, std::get<N>(std::forward<Ts>(ts))...);
                 tuple_for_each_helper<N + 1>(f, std::forward<Ts>(ts)...);
@@ -119,7 +119,7 @@ namespace uf
     template<typename F, typename... Ts>
     constexpr void tuple_for_each(F&& f, Ts&&... ts)
     {
-        constexpr u64 size = std::tuple_size_v<std::remove_reference_t<mt::first_t<Ts...>>>;
+        constexpr u64 size = std::tuple_size_v<std::remove_reference_t<mt::tpack_first_t<Ts...>>>;
         static_assert (((std::tuple_size_v<std::remove_reference_t<Ts>> == size) && ...));
         detail::tuple_for_each_helper<0>(std::forward<F>(f), std::forward<Ts>(ts)...);
     }
@@ -127,7 +127,7 @@ namespace uf
     template<typename F, typename... Ts>
     constexpr auto tuple_transform(F&& f, Ts&&... ts)
     {
-        constexpr u64 size = std::tuple_size_v<std::remove_reference_t<mt::first_t<Ts...>>>;
+        constexpr u64 size = std::tuple_size_v<std::remove_reference_t<mt::tpack_first_t<Ts...>>>;
         static_assert (((std::tuple_size_v<std::remove_reference_t<Ts>> == size) && ...));
         return detail::tuple_transform_helper(make_sequence<size>(), std::forward<F>(f), std::forward<Ts>(ts)...);
     }

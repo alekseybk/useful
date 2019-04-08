@@ -69,18 +69,6 @@ namespace uf::mt
     template<auto, typename Tp>
     constexpr Tp clone_something();
 
-    template<typename S, typename... Ts>
-    struct tuple_from_seq;
-
-    template<auto... Ns, typename... Ts>
-    struct tuple_from_seq<sequence<Ns...>, Ts...>
-    {
-        using type = std::tuple<std::tuple_element_t<Ns, std::tuple<Ts...>>...>;
-    };
-
-    template<typename S, typename... Ts>
-    using tuple_from_seq_t = typename tuple_from_seq<S, Ts...>::type;
-
     template<typename Tp>
     struct is_tuple : public std::false_type { };
 
@@ -114,18 +102,25 @@ namespace uf::mt
     template<typename Tp>
     inline constexpr bool is_decayed_v = is_decayed<Tp>::value;
 
-    template<typename... Ts>
-    struct first;
-
     template<typename F, typename... Ts>
-    struct first<F, Ts...> : type_identity<F> { };
+    struct tpack_first : type_identity<F> { };
 
-    DECLARE_T1S(first, typename...);
+    DECLARE_T1S(tpack_first, typename...);
+
+    template<auto N, auto... Ns>
+    struct npack_first : constant<N> { };
+
+    DECLARE_V2S(npack_first, auto, auto...);
 
     template<typename... Ts>
-    struct last : type_identity<typename decltype((type_identity<Ts>{ }, ...))::type> { };
+    struct tpack_last : type_identity<typename decltype((type_identity<Ts>{ }, ...))::type> { };
 
-    DECLARE_T1S(last, typename...);
+    DECLARE_T1S(tpack_last, typename...);
+
+    template<auto... Ns>
+    struct npack_last : constant<(Ns, ...)> { };
+
+    DECLARE_V1S(npack_last, auto...);
 
     template<auto N, auto... Ns>
     struct is_npack_contain : std::bool_constant<((N == Ns) || ...)> { };
@@ -138,7 +133,7 @@ namespace uf::mt
     DECLARE_V2S(is_tpack_contain, typename, typename...);
 
     template<typename... Ts>
-    struct is_tpack_same : std::bool_constant<(std::is_same_v<first_t<Ts...>, Ts> && ...)> { };
+    struct is_tpack_same : std::bool_constant<(std::is_same_v<tpack_first_t<Ts...>, Ts> && ...)> { };
 
     DECLARE_V1S(is_tpack_same, typename...);
 
@@ -149,6 +144,16 @@ namespace uf::mt
 
     inline namespace sequence_operations
     {
+        template<typename S>
+        struct seq_first : constant<S::template get<0>> { };
+
+        DECLARE_V1(seq_first, typename);
+
+        template<typename S>
+        struct seq_last : constant<S::template get<S::size - 1>> { };
+
+        DECLARE_V1(seq_last, typename);
+
         template<typename S, u64... Ns>
         struct seq_select : type_identity<sequence<S::template get<Ns>()...>> { };
 
@@ -250,6 +255,16 @@ namespace uf::mt
 
     inline namespace tuple_operations
     {
+        template<typename T>
+        struct tuple_first : type_identity<std::tuple_element_t<0, T>> { };
+
+        DECLARE_T1(tuple_first, typename);
+
+        template<typename T>
+        struct tuple_last : type_identity<std::tuple_element_t<std::tuple_size_v<T> - 1, T>> { };
+
+        DECLARE_T1(tuple_last, typename);
+
         template<typename T, u64... Ns>
         struct tuple_select : type_identity<std::tuple<std::tuple_element_t<Ns, T>...>> { };
 
@@ -348,7 +363,6 @@ namespace uf::mt
         DECLARE_T2S(tuple_remove, typename, typename...);
     }
     // inline namespace tuple_operations
-
 
     // TODO: refactoring
     template<typename Tp>
