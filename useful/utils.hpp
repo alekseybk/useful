@@ -146,15 +146,11 @@ namespace uf
     template<class SeqContainer>
     auto add_positions(SeqContainer&& x)
     {
-        using decayed = std::decay_t<SeqContainer>;
-        using value_type = typename decayed::value_type;
-        using result_type = typename mt::instance_info<decayed>::template type<std::pair<u64, value_type>>;
-
-        return add_positions<result_type>(x);
+        return add_positions<mt::instance_info<std::decay_t<SeqContainer>>::template type<std::pair<u64, typename std::decay_t<SeqContainer>::value_type>>>>(std::forward<SeqContainer>(x));
     }
 
     template<class SeqContainer, typename Compare>
-    auto add_positions_sort(SeqContainer&& c, Compare&& compare)
+    auto add_positions_and_sort(SeqContainer&& c, Compare&& compare)
     {
         auto result = add_positions(std::forward<SeqContainer>(c));
         std::sort(result.begin(), result.end(), [&compare](const auto& e1, const auto& e2)
@@ -269,7 +265,41 @@ namespace uf
             return detail::subtuple_helper(std::forward<T>(t), mt::seq_increasing_t<B, E>());
     }
 
-    // TODO: tuple clip
+    template<u64... Ns, typename T>
+    auto subtuple_only(T&& t)
+    {
+        return detail::subtuple_helper(std::forward<T>(t), sequence<Ns...>());
+    }
+
+    template<u64... Ns, typename T>
+    auto subtuple_only_ref(T&& t)
+    {
+        return detail::subtuple_ref_helper(std::forward<T>(t), sequence<Ns...>());
+    }
+
+    template<u64... Ns, typename T>
+    auto subtuple_exclude(T&& t)
+    {
+        return detail::subtuple_helper(std::forward<T>(t), mt::seq_remove_t<make_sequence<std::tuple_size_v<std::decay_t<T>>>, Ns...>());
+    }
+
+    template<u64... Ns, typename T>
+    auto subtuple_exclude_ref(T&& t)
+    {
+        return detail::subtuple_ref_helper(std::forward<T>(t), mt::seq_remove_t<make_sequence<std::tuple_size_v<std::decay_t<T>>>, Ns...>());
+    }
+
+    template<typename Tp>
+    auto get_unique(Tp&& obj)
+    {
+        return std::make_unique<std::remove_reference_t<Tp>>(std::forward<Tp>(obj));
+    }
+
+    template<typename Tp>
+    auto get_shared(Tp&& obj)
+    {
+        return std::make_shared<std::remove_reference_t<Tp>>(std::forward<Tp>(obj));
+    }
 
     class spinlock
     {

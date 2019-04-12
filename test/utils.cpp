@@ -305,7 +305,6 @@ TEST(subtuple)
     std::tuple<X, X> st = subtuple<1>(std::move(t));
     std::tuple<X> sst = subtuple<1>(std::move(st));
     assert_eq(std::get<0>(sst).a, 3);
-
 }
 
 TEST(subtuple_ref)
@@ -322,6 +321,22 @@ TEST(subtuple_ref)
     std::tuple<X&&, X&&> st = subtuple_ref<1>(std::move(t));
     std::tuple<X&> sst = subtuple_ref<1>(st);
     assert_eq(std::get<0>(sst).a, 3);
+}
+
+TEST(subtuple_exclude_ref)
+{
+    struct X
+    {
+        int a;
+        X(int a) : a(a) { }
+        X(X&&){ assert(false); }
+        X(const X&){ assert(false); }
+    };
+
+     std::tuple<X, X, X> t(1, 2, 3);
+     std::tuple<X&&, X&&> st = subtuple_exclude_ref<0>(std::move(t));
+     std::tuple<X&> sst = subtuple_exclude_ref<0>(st);
+     assert_eq(std::get<0>(sst).a, 3);
 }
 
 TEST(tuple_for_each)
