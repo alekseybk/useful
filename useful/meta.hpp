@@ -114,6 +114,20 @@ namespace uf::mt
 
     DECLARE_V1S(is_npack_same, auto...);
 
+    template<typename... Ts>
+    struct is_tpack_different;
+
+    template<typename First, typename... Ts>
+    struct is_tpack_different<First, Ts...> : std::bool_constant<!(std::is_same_v<First, Ts> || ...) && is_tpack_different<Ts...>::value> { };
+
+    template<typename First>
+    struct is_tpack_different<First> : std::true_type { };
+
+    template<>
+    struct is_tpack_different<> : std::true_type { };
+
+    DECLARE_V1S(is_tpack_different, typename...);
+
     inline namespace sequence_operations
     {
         template<typename S>
