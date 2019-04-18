@@ -284,7 +284,6 @@ TEST(span)
 
     {
         std::string s;
-        const std::string& sref = s;
         span sp{s};
         static_assert(std::is_same_v<decltype(sp)::value_type, const std::string>);
     }

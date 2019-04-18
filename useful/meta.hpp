@@ -1,15 +1,15 @@
 #pragma once
 #include "import.hpp"
 
-#define DECLARE_V1(name, a1) \
+#define DECLARE_N1(name, a1) \
     template<a1 A1> \
     inline constexpr auto name##_v = name<A1>::value
 
-#define DECLARE_V2(name, a1, a2) \
+#define DECLARE_N2(name, a1, a2) \
     template<a1 A1, a2 A2> \
     inline constexpr auto name##_v = name<A1, A2>::value
 
-#define DECLARE_V3(name, a1, a2, a3) \
+#define DECLARE_N3(name, a1, a2, a3) \
     template<a1 A1, a2 A2, a3 A3> \
     inline constexpr auto name##_v = name<A1, A2, A3>::value
 
@@ -25,15 +25,15 @@
     template<a1 A1, a2 A2, a3 A3> \
     using name##_t = typename name<A1, A2, A3>::type
 
-#define DECLARE_V1S(name, a1) \
+#define DECLARE_N1S(name, a1) \
     template<a1 A1> \
     inline constexpr auto name##_v = name<A1...>::value
 
-#define DECLARE_V2S(name, a1, a2) \
+#define DECLARE_N2S(name, a1, a2) \
     template<a1 A1, a2 A2> \
     inline constexpr auto name##_v = name<A1, A2...>::value
 
-#define DECLARE_V3S(name, a1, a2, a3) \
+#define DECLARE_N3S(name, a1, a2, a3) \
     template<a1 A1, a2 A2, a3 A3> \
     inline constexpr auto name##_v = name<A1, A2, A3...>::value
 
@@ -72,7 +72,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_decayed : std::bool_constant<!std::is_const_v<Tp> && !std::is_volatile_v<Tp> && !std::is_reference_v<Tp>> { };
 
-    DECLARE_V1(is_decayed, typename);
+    DECLARE_N1(is_decayed, typename);
 
     template<typename F, typename... Ts>
     struct tpack_first : type_identity<F> { };
@@ -82,7 +82,7 @@ namespace uf::mt
     template<auto N, auto... Ns>
     struct npack_first : constant<N> { };
 
-    DECLARE_V2S(npack_first, auto, auto...);
+    DECLARE_N2S(npack_first, auto, auto...);
 
     template<typename... Ts>
     struct tpack_last : type_identity<typename decltype((type_identity<Ts>{ }, ...))::type> { };
@@ -92,27 +92,37 @@ namespace uf::mt
     template<auto... Ns>
     struct npack_last : constant<(Ns, ...)> { };
 
-    DECLARE_V1S(npack_last, auto...);
+    DECLARE_N1S(npack_last, auto...);
+
+    template<u64 N, typename... Ts>
+    struct tpack_nth : type_identity<std::tuple_element_t<N, std::tuple<Ts...>>> { };
+
+    DECLARE_T2S(tpack_nth, u64, typename...);
+
+    template<u64 N, auto... Ns>
+    struct npack_nth : constant<sequence<Ns...>::template nth<N>> { };
+
+    DECLARE_N2S(npack_nth, u64, auto...);
 
     template<auto N, auto... Ns>
     struct is_npack_contain : std::bool_constant<((N == Ns) || ...)> { };
 
-    DECLARE_V2S(is_npack_contain, auto, auto...);
+    DECLARE_N2S(is_npack_contain, auto, auto...);
 
     template<typename Tp, typename... Ts>
     struct is_tpack_contain : std::bool_constant<(std::is_same_v<Tp, Ts> || ...)> { };
 
-    DECLARE_V2S(is_tpack_contain, typename, typename...);
+    DECLARE_N2S(is_tpack_contain, typename, typename...);
 
     template<typename... Ts>
     struct is_tpack_same : std::bool_constant<(std::is_same_v<tpack_first_t<Ts...>, Ts> && ...)> { };
 
-    DECLARE_V1S(is_tpack_same, typename...);
+    DECLARE_N1S(is_tpack_same, typename...);
 
     template<auto... Ns>
     struct is_npack_same : std::bool_constant<((sequence<Ns...>::template value<0> == Ns) && ...)> { };
 
-    DECLARE_V1S(is_npack_same, auto...);
+    DECLARE_N1S(is_npack_same, auto...);
 
     template<typename... Ts>
     struct is_tpack_different;
@@ -126,19 +136,19 @@ namespace uf::mt
     template<>
     struct is_tpack_different<> : std::true_type { };
 
-    DECLARE_V1S(is_tpack_different, typename...);
+    DECLARE_N1S(is_tpack_different, typename...);
 
     inline namespace sequence_operations
     {
         template<typename S>
         struct seq_first : constant<S::template get<0>> { };
 
-        DECLARE_V1(seq_first, typename);
+        DECLARE_N1(seq_first, typename);
 
         template<typename S>
         struct seq_last : constant<S::template get<S::size - 1>> { };
 
-        DECLARE_V1(seq_last, typename);
+        DECLARE_N1(seq_last, typename);
 
         template<typename S, u64... Ns>
         struct seq_select : type_identity<sequence<S::template get<Ns>()...>> { };
@@ -159,7 +169,7 @@ namespace uf::mt
         template<auto... Ns, auto N>
         struct is_seq_contain<sequence<Ns...>, N> : is_npack_contain<N, Ns...> { };
 
-        DECLARE_V2(is_seq_contain, typename, auto);
+        DECLARE_N2(is_seq_contain, typename, auto);
 
         template<typename... Ts>
         struct seq_concat;
@@ -294,7 +304,7 @@ namespace uf::mt
         template<typename... Ts, typename Tp>
         struct is_tuple_contain<std::tuple<Ts...>, Tp> : is_tpack_contain<Tp, Ts...> { };
 
-        DECLARE_V2(is_tuple_contain, typename, typename);
+        DECLARE_N2(is_tuple_contain, typename, typename);
 
         template<typename... Ts>
         struct tuple_concat;
@@ -380,7 +390,7 @@ namespace uf::mt
     template<template<typename...> typename Tp, typename... Ts>
     struct is_instantiated<Tp<Ts...>> : public std::true_type { };
 
-    DECLARE_V1(is_instantiated, typename);
+    DECLARE_N1(is_instantiated, typename);
 
     template<typename A, typename B>
     struct is_instantiated_from_same : std::false_type { };
@@ -388,7 +398,7 @@ namespace uf::mt
     template<template<typename...> typename Tp, typename... A, typename... B>
     struct is_instantiated_from_same<Tp<A...>, Tp<B...>> : std::true_type { };
 
-    DECLARE_V2(is_instantiated_from_same, typename, typename);
+    DECLARE_N2(is_instantiated_from_same, typename, typename);
 
     template<template<typename...> typename Expected, typename Tested>
     struct is_instantiated_from : public std::false_type { };
@@ -396,7 +406,7 @@ namespace uf::mt
     template<template<typename...> typename Expected, typename... Ts>
     struct is_instantiated_from<Expected, Expected<Ts...>> : public std::true_type { };
 
-    DECLARE_V2(is_instantiated_from, template<typename...> typename, typename);
+    DECLARE_N2(is_instantiated_from, template<typename...> typename, typename);
 
     template<typename Tp>
     struct instance_info;
@@ -424,7 +434,7 @@ namespace uf::mt
     template<class F>
     struct function_info;
 
-    template<class R, class... Args>
+    template<typename R, typename... Args>
     struct function_info<R(Args...)>
     {
         static constexpr u64 arity = sizeof...(Args);
@@ -435,13 +445,13 @@ namespace uf::mt
         using nth = std::tuple_element_t<N, std::tuple<Args...>>;
     };
 
-    template<class R, class... Args>
+    template<typename R, typename... Args>
     struct function_info<std::function<R(Args...)>> : public function_info<R(Args...)> { };
 
-    template<class R, class... Args>
+    template<typename R, typename... Args>
     struct function_info<R(*)(Args...)> : public function_info<R(Args...)> { };
 
-    template<class C, class R, class... Args>
+    template<class C, typename R, typename... Args>
     struct function_info<R(C::*)(Args...)> : public function_info<R(Args...)> { };
 
     // **********************************
@@ -451,7 +461,7 @@ namespace uf::mt
     template<class Tp>
     struct is_iterable<Tp, sfinae_t<decltype(*std::begin(std::declval<Tp>())), decltype(std::end(std::declval<Tp>()))>> : public std::true_type { };
 
-    DECLARE_V1(is_iterable, typename);
+    DECLARE_N1(is_iterable, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_dereferenceable : public std::false_type { };
@@ -459,7 +469,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_dereferenceable<Tp, sfinae_t<decltype(*std::declval<Tp>())>> : public std::true_type { };
 
-    DECLARE_V1(is_dereferenceable, typename);
+    DECLARE_N1(is_dereferenceable, typename);
 
     // **********************************
     template<typename S>
@@ -468,7 +478,7 @@ namespace uf::mt
     template<auto... Ns>
     struct is_sequence<sequence<Ns...>> : std::true_type { };
 
-    DECLARE_V1(is_sequence, typename);
+    DECLARE_N1(is_sequence, typename);
 
     template<typename S>
     struct is_positive_sequence : std::false_type { };
@@ -476,12 +486,12 @@ namespace uf::mt
     template<auto... Ns>
     struct is_positive_sequence<sequence<Ns...>> : public std::bool_constant<((Ns >= 0) && ...)> { };
 
-    DECLARE_V1(is_positive_sequence, typename);
+    DECLARE_N1(is_positive_sequence, typename);
 
     template<typename Tp>
     struct is_smart_pointer : std::bool_constant<is_instantiated_from_v<std::unique_ptr, Tp> || is_instantiated_from_v<std::shared_ptr, Tp> || is_instantiated_from_v<std::weak_ptr, Tp>> { };
 
-    DECLARE_V1(is_smart_pointer, typename);
+    DECLARE_N1(is_smart_pointer, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_iterator : public std::false_type { };
@@ -489,7 +499,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_iterator<Tp, sfinae_t<typename std::iterator_traits<Tp>::iterator_category>> : public std::true_type { };
 
-    DECLARE_V1(is_iterator, typename);
+    DECLARE_N1(is_iterator, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_random_access_iterator : public std::false_type { };
@@ -497,7 +507,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_random_access_iterator<Tp, enif<std::is_same_v<typename std::iterator_traits<Tp>::iterator_category, std::random_access_iterator_tag>>> : public std::true_type { };
 
-    DECLARE_V1(is_random_access_iterator, typename);
+    DECLARE_N1(is_random_access_iterator, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_random_access_container : std::false_type { };
@@ -505,7 +515,7 @@ namespace uf::mt
     template<typename Tp>
     struct is_random_access_container<Tp, enif<is_iterable_v<Tp>>> : public is_random_access_iterator<typename std::remove_reference_t<Tp>::iterator> { };
 
-    DECLARE_V1(is_random_access_container, typename);
+    DECLARE_N1(is_random_access_container, typename);
 }
 // namespace uf::mt
 
@@ -515,15 +525,15 @@ namespace uf
 }
 // namespace uf
 
-#undef DECLARE_V1
-#undef DECLARE_V2
-#undef DECLARE_V3
+#undef DECLARE_N1
+#undef DECLARE_N2
+#undef DECLARE_N3
 #undef DECLARE_T1
 #undef DECLARE_T2
 #undef DECLARE_T3
-#undef DECLARE_V1S
-#undef DECLARE_V2S
-#undef DECLARE_V3S
+#undef DECLARE_N1S
+#undef DECLARE_N2S
+#undef DECLARE_N3S
 #undef DECLARE_T1S
 #undef DECLARE_T2S
 #undef DECLARE_T3S

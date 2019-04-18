@@ -21,10 +21,16 @@ namespace uf
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     private:
-        const pointer data_;
-        const u64 size_;
+        pointer data_ = nullptr;
+        u64 size_ = 0;
 
     public:
+        span() noexcept = default;
+
+        span(const span&) noexcept = default;
+
+        span& operator=(const span&) noexcept = default;
+
         template<typename T1>
         span(T1&& begin, u64 count) : data_(get_underlying_ptr(begin)), size_(count) { }
 
@@ -39,6 +45,12 @@ namespace uf
 
         template<typename T, u64 N>
         span(T(&arr)[N]) : span(arr, N) { }
+
+        void clear() noexcept
+        {
+            data_ = nullptr;
+            size_ = 0;
+        }
 
         u64 size() const noexcept
         {
