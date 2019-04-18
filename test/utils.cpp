@@ -284,8 +284,13 @@ TEST(span)
 
     {
         std::string s;
-        span sp{s};
-        static_assert(std::is_same_v<decltype(sp)::value_type, const std::string>);
+        auto f = [](auto s)
+        {
+            static_assert(std::is_same_v<typename decltype(s)::value_type, const int>);
+            assert_eq(s[1], 6);
+            assert_eq(s.size(), 3);
+        };
+        f(span{2, 6, 1});
     }
 }
 
