@@ -37,22 +37,20 @@ namespace uf
         template<typename T1, typename T2, disif<std::is_integral_v<std::decay_t<T2>>> = sdef>
         span(T1&& begin, T2&& end) : data_(get_base_ptr(begin))
         {
-            static_assert (std::is_same_v<std::remove_reference_t<T1>, std::remove_reference_t<T2>>);
-            static_assert (mt::is_random_access_iterator_v<std::remove_reference_t<T1>>);
+            using first = decltype(get_base_ptr(std::declval<T1&&>()));
+            using second = decltype(get_base_ptr(std::declval<T2&&>()));
+            static_assert (std::is_same_v<first, second>);
 
             auto bptr = get_base_ptr(end);
             if (bptr < data_)
-                throw std::out_of_range("span::span: End less then begin");
+                throw std::out_of_range("span::span: Invalid [begin, end) range");
             if ((reinterpret_cast<u64>(bptr) - reinterpret_cast<u64>(data_)) % sizeof(Tp))
-                throw std::out_of_range("span::span: Invalid end ptr");
+                throw std::out_of_range("span::span: Invalid [begin, end) range");
             size_ = bptr - data_;
         }
 
         template<typename C>
-        span(C&& container) : span(std::begin(container), std::end(container))
-        {
-            static_assert (mt::is_random_access_container_v<std::remove_reference_t<C>>);
-        }
+        span(C&& container) : span(container.begin(), container.end()) { }
 
         template<typename T>
         span(std::initializer_list<T> l) : span(l.begin(), l.end()) { }
@@ -158,7 +156,7 @@ namespace uf
     span(T1&&, T2&&) -> span<std::remove_pointer_t<decltype(get_base_ptr(std::declval<T1&&>()))>>;
 
     template<typename C, sfinae = sdef>
-    span(C&&) -> span<std::remove_const_t<std::remove_reference_t<decltype(*std::begin(std::declval<C&&>()))>>>;
+    span(C&&) -> span<std::remove_pointer_t<decltype(get_base_ptr(std::declval<C&&>().begin()))>>;
 
     template<typename T>
     span(std::initializer_list<T>) -> span<const T>;
