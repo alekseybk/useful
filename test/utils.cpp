@@ -235,7 +235,7 @@ TEST(get_underlying_ptr)
         std::vector<int> v{1, 2, 3};
         auto i = v.begin() + 2;
         auto ri = v.rbegin();
-        assert_eq(get_underlying_ptr(i), get_underlying_ptr(ri));
+        assert_eq(get_base_ptr(i), get_base_ptr(ri));
     }
 }
 
@@ -291,6 +291,23 @@ TEST(span)
             assert_eq(s.size(), 3);
         };
         f(span{2, 6, 1});
+    }
+
+    {
+        std::vector<int> v{1, 2, 3};
+        span s1(v);
+        span<const int> s2(s1);
+        assert_true(s2[0] == 1 && s2[1] == 2 && s2[2] == 3);
+    }
+
+    {
+        std::vector<int> v{1, 2, 3};
+        span s = v;
+        s = s.subspan(1);
+        s = s.subspan(1);
+        s = s.subspan(1);
+        assert_eq(s.size(), 0);
+        assert_eq(s.data(), v.data() + 3);
     }
 }
 

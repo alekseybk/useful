@@ -223,26 +223,26 @@ namespace uf
         }
 
         template<typename T>
-        auto* get_underlying_ptr(T* object)
+        auto* get_base_ptr(T* object)
         {
             return object;
         }
 
         template<typename T, enif<mt::is_iterator_v<std::decay_t<T>>> = sdef, disif<mt::is_instantiated_from_v<std::reverse_iterator, std::remove_reference_t<T>>> = sdef>
-        auto* get_underlying_ptr(T&& object)
+        auto* get_base_ptr(T&& object)
         {
             return object.base();
         }
 
         template<typename T, enif<mt::is_instantiated_from_v<std::reverse_iterator, std::remove_reference_t<T>>> = sdef>
-        auto* get_underlying_ptr(T&& object)
+        auto* get_base_ptr(T&& object)
         {
             auto b = object.base();
-            return get_underlying_ptr(--b);
+            return get_base_ptr(--b);
         }
 
         template<typename T, enif<uf::mt::is_smart_pointer_v<std::decay_t<T>>> = sdef>
-        auto* get_underlying_ptr(T&& object)
+        auto* get_base_ptr(T&& object)
         {
             return object.get();
         }

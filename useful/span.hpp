@@ -32,13 +32,27 @@ namespace uf
         span& operator=(const span&) noexcept = default;
 
         template<typename T1>
-        span(T1&& begin, u64 count) : data_(get_underlying_ptr(begin)), size_(count) { }
+        span(T1&& begin, u64 count) : data_(get_base_ptr(begin)), size_(count) { }
 
-        template<typename T1, typename T2, enif<std::is_same_v<std::remove_reference_t<T1>, std::remove_reference_t<T2>> && mt::is_random_access_iterator_v<std::remove_reference_t<T1>>> = sdef>
-        span(T1&& begin, T2&& end) : data_(get_underlying_ptr(begin)), size_(std::distance<pointer>(data_, get_underlying_ptr(end))) { }
+        template<typename T1, typename T2, disif<std::is_integral_v<std::decay_t<T2>>> = sdef>
+        span(T1&& begin, T2&& end) : data_(get_base_ptr(begin))
+        {
+            static_assert (std::is_same_v<std::remove_reference_t<T1>, std::remove_reference_t<T2>>);
+            static_assert (mt::is_random_access_iterator_v<std::remove_reference_t<T1>>);
 
-        template<typename C, enif<mt::is_random_access_container_v<std::remove_reference_t<C>>> = sdef>
-        span(C&& container) : span(std::begin(container), std::end(container)) { }
+            auto bptr = get_base_ptr(end);
+            if (bptr < data_)
+                throw std::out_of_range("span::span: End less then begin");
+            if ((reinterpret_cast<u64>(bptr) - reinterpret_cast<u64>(data_)) % sizeof(Tp))
+                throw std::out_of_range("span::span: Invalid end ptr");
+            size_ = bptr - data_;
+        }
+
+        template<typename C>
+        span(C&& container) : span(std::begin(container), std::end(container))
+        {
+            static_assert (mt::is_random_access_container_v<std::remove_reference_t<C>>);
+        }
 
         template<typename T>
         span(std::initializer_list<T> l) : span(l.begin(), l.end()) { }
@@ -64,7 +78,9 @@ namespace uf
 
         span subspan(u64 begin = 0, u64 count = std::numeric_limits<u64>::max()) const
         {
-            return span(&data_[begin], &data_[begin + std::min(count, size_)]);
+            if (count == std::numeric_limits<u64>::max())
+                return span(data_ + begin, data_ + size_);
+            return span(data_ + begin, data_ + begin + count);
         }
 
         reference front() const
@@ -136,10 +152,10 @@ namespace uf
     };
 
     template<typename T1>
-    span(T1&&, u64) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<T1&&>()))>>;
+    span(T1&&, u64) -> span<std::remove_pointer_t<decltype(get_base_ptr(std::declval<T1&&>()))>>;
 
     template<typename T1, typename T2>
-    span(T1&&, T2&&) -> span<std::remove_pointer_t<decltype(get_underlying_ptr(std::declval<T1&&>()))>>;
+    span(T1&&, T2&&) -> span<std::remove_pointer_t<decltype(get_base_ptr(std::declval<T1&&>()))>>;
 
     template<typename C, sfinae = sdef>
     span(C&&) -> span<std::remove_const_t<std::remove_reference_t<decltype(*std::begin(std::declval<C&&>()))>>>;
