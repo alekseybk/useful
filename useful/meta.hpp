@@ -385,10 +385,10 @@ namespace uf::mt
     // inline namespace tuple_operations
 
     template<typename Tp>
-    struct is_instantiated : public std::false_type { };
+    struct is_instantiated : std::false_type { };
 
     template<template<typename...> typename Tp, typename... Ts>
-    struct is_instantiated<Tp<Ts...>> : public std::true_type { };
+    struct is_instantiated<Tp<Ts...>> : std::true_type { };
 
     DECLARE_N1(is_instantiated, typename);
 
@@ -401,10 +401,10 @@ namespace uf::mt
     DECLARE_N2(is_instantiated_from_same, typename, typename);
 
     template<template<typename...> typename Expected, typename Tested>
-    struct is_instantiated_from : public std::false_type { };
+    struct is_instantiated_from : std::false_type { };
 
     template<template<typename...> typename Expected, typename... Ts>
-    struct is_instantiated_from<Expected, Expected<Ts...>> : public std::true_type { };
+    struct is_instantiated_from<Expected, Expected<Ts...>> : std::true_type { };
 
     DECLARE_N2(is_instantiated_from, template<typename...> typename, typename);
 
@@ -446,28 +446,28 @@ namespace uf::mt
     };
 
     template<typename R, typename... Args>
-    struct function_info<std::function<R(Args...)>> : public function_info<R(Args...)> { };
+    struct function_info<std::function<R(Args...)>> : function_info<R(Args...)> { };
 
     template<typename R, typename... Args>
-    struct function_info<R(*)(Args...)> : public function_info<R(Args...)> { };
+    struct function_info<R(*)(Args...)> : function_info<R(Args...)> { };
 
     template<class C, typename R, typename... Args>
-    struct function_info<R(C::*)(Args...)> : public function_info<R(Args...)> { };
+    struct function_info<R(C::*)(Args...)> : function_info<R(Args...)> { };
 
     // **********************************
     template<class Tp, typename = sfinae>
-    struct is_iterable : public std::false_type { };
+    struct is_iterable : std::false_type { };
 
     template<class Tp>
-    struct is_iterable<Tp, sfinae_t<decltype(*std::begin(std::declval<Tp>())), decltype(std::end(std::declval<Tp>()))>> : public std::true_type { };
+    struct is_iterable<Tp, sfinae_t<decltype(*std::begin(std::declval<Tp>())), decltype(std::end(std::declval<Tp>()))>> : std::true_type { };
 
     DECLARE_N1(is_iterable, typename);
 
     template<typename Tp, typename = sfinae>
-    struct is_dereferenceable : public std::false_type { };
+    struct is_dereferenceable : std::false_type { };
 
     template<typename Tp>
-    struct is_dereferenceable<Tp, sfinae_t<decltype(*std::declval<Tp>())>> : public std::true_type { };
+    struct is_dereferenceable<Tp, sfinae_t<decltype(*std::declval<Tp>())>> : std::true_type { };
 
     DECLARE_N1(is_dereferenceable, typename);
 
@@ -484,7 +484,7 @@ namespace uf::mt
     struct is_positive_sequence : std::false_type { };
 
     template<auto... Ns>
-    struct is_positive_sequence<sequence<Ns...>> : public std::bool_constant<((Ns >= 0) && ...)> { };
+    struct is_positive_sequence<sequence<Ns...>> : std::bool_constant<((Ns >= 0) && ...)> { };
 
     DECLARE_N1(is_positive_sequence, typename);
 
@@ -494,18 +494,28 @@ namespace uf::mt
     DECLARE_N1(is_smart_pointer, typename);
 
     template<typename Tp, typename = sfinae>
-    struct is_iterator : public std::false_type { };
+    struct is_iterator : std::false_type { };
 
     template<typename Tp>
-    struct is_iterator<Tp, sfinae_t<typename std::iterator_traits<Tp>::iterator_category>> : public std::true_type { };
+    struct is_iterator<Tp, sfinae_t<typename std::iterator_traits<Tp>::iterator_category>> : std::true_type { };
 
     DECLARE_N1(is_iterator, typename);
 
-    template<typename Tp, typename = sfinae>
-    struct is_random_access_iterator : public std::false_type { };
+    template<typename Tp>
+    struct is_reverse_iterator : std::bool_constant<is_iterator_v<Tp> && is_instantiated_from_v<std::reverse_iterator, Tp>> { };
+
+    DECLARE_N1(is_reverse_iterator, typename);
 
     template<typename Tp>
-    struct is_random_access_iterator<Tp, enif<std::is_same_v<typename std::iterator_traits<Tp>::iterator_category, std::random_access_iterator_tag>>> : public std::true_type { };
+    struct is_forward_iterator : std::bool_constant<is_iterator_v<Tp> && !is_reverse_iterator_v<Tp>> { };
+
+    DECLARE_N1(is_forward_iterator, typename);
+
+    template<typename Tp, typename = sfinae>
+    struct is_random_access_iterator : std::false_type { };
+
+    template<typename Tp>
+    struct is_random_access_iterator<Tp, enif<std::is_same_v<typename std::iterator_traits<Tp>::iterator_category, std::random_access_iterator_tag>>> : std::true_type { };
 
     DECLARE_N1(is_random_access_iterator, typename);
 
@@ -513,7 +523,7 @@ namespace uf::mt
     struct is_random_access_container : std::false_type { };
 
     template<typename Tp>
-    struct is_random_access_container<Tp, enif<is_iterable_v<Tp>>> : public is_random_access_iterator<typename std::remove_reference_t<Tp>::iterator> { };
+    struct is_random_access_container<Tp, enif<is_iterable_v<Tp>>> : is_random_access_iterator<typename std::remove_reference_t<Tp>::iterator> { };
 
     DECLARE_N1(is_random_access_container, typename);
 }

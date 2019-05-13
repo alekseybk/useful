@@ -225,7 +225,18 @@ namespace uf
         template<typename T>
         auto* get_base_ptr(T&& object)
         {
-            return &(*object);
+            using decayed = std::decay_t<T>;
+
+            if constexpr (std::is_pointer_v<decayed>)
+                return object;
+            else if constexpr (mt::is_forward_iterator_v<decayed>)
+                return object.base();
+            else if constexpr (mt::is_reverse_iterator_v<decayed>)
+                return object.base().base() - 1;
+            else if constexpr (uf::mt::is_smart_pointer_v<decayed>)
+                return object.get();
+            else
+                return &(*object);
         }
 
         template<u64 B = 0, u64 E = std::numeric_limits<u64>::max(), typename T>
