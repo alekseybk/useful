@@ -233,7 +233,7 @@ namespace uf
                 return object.base();
             else if constexpr (mt::is_reverse_iterator_v<decayed>)
                 return object.base().base() - 1;
-            else if constexpr (uf::mt::is_smart_pointer_v<decayed>)
+            else if constexpr (mt::is_smart_pointer_v<decayed>)
                 return object.get();
             else
                 return &(*object);
@@ -294,6 +294,33 @@ namespace uf
         {
             return std::make_shared<std::remove_reference_t<Tp>>(std::forward<Tp>(obj));
         }
+
+        template<class T>
+        class reverse_wrapper
+        {
+            static_assert (!std::is_rvalue_reference_v<T>);
+            using holder_type = std::conditional_t<std::is_lvalue_reference_v<T>, T, std::remove_reference_t<T>>;
+
+        private:
+            holder_type container_;
+
+        public:
+            template<class Container>
+            reverse_wrapper(Container&& container) : container_(std::forward<Container>(container)) { }
+
+            auto begin()
+            {
+                return container_.rbegin();
+            }
+
+            auto end()
+            {
+                return container_.rend();
+            }
+        };
+
+        template<class Container>
+        reverse_wrapper(Container&&) -> reverse_wrapper<Container>;
 
         class spinlock
         {
