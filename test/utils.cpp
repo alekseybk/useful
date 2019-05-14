@@ -407,4 +407,32 @@ TEST(tuple_transform)
     }
 }
 
+TEST(reverse_wrapper)
+{
+    {
+        std::vector v{1, 2, 3};
+        std::vector<int> a;
+        for (const auto& e : reverse_wrapper(v))
+            a.push_back(e);
+        assert_eq(a[0], 3);
+        assert_eq(a[1], 2);
+        assert_eq(a[2], 1);
+    }
+
+    {
+        std::vector<int> a;
+        for (const auto& e : reverse_wrapper(std::vector{1, 2, 3}))
+            a.push_back(e);
+        assert_eq(a[0], 3);
+        assert_eq(a[1], 2);
+        assert_eq(a[2], 1);
+    }
+
+    {
+        const std::list<int> l{1, 2, 3};
+        auto w = reverse_wrapper(l);
+        static_assert (std::is_same_v<decltype(*w.begin()), const int&>);
+    }
+}
+
 
