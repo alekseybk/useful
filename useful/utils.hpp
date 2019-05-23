@@ -223,7 +223,7 @@ namespace uf
         }
 
         template<typename T>
-        auto* get_base_ptr(T&& object)
+        constexpr auto* get_base_ptr(T&& object)
         {
             using decayed = std::decay_t<T>;
 

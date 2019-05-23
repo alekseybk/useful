@@ -32,10 +32,10 @@ namespace uf
         span& operator=(const span&) noexcept = default;
 
         template<typename T1>
-        span(T1&& begin, u64 count) : data_(get_base_ptr(begin)), size_(count) { }
+        constexpr span(T1&& begin, u64 count) : data_(get_base_ptr(begin)), size_(count) { }
 
         template<typename T1, typename T2, disif<std::is_integral_v<std::decay_t<T2>>> = sdef>
-        span(T1&& begin, T2&& end) : data_(get_base_ptr(begin))
+        constexpr span(T1&& begin, T2&& end) : data_(get_base_ptr(begin))
         {
             using first = decltype(get_base_ptr(std::declval<T1&&>()));
             using second = decltype(get_base_ptr(std::declval<T2&&>()));
@@ -50,100 +50,100 @@ namespace uf
         }
 
         template<typename C>
-        span(C&& container) : span(container.begin(), container.end()) { }
+        constexpr span(C&& container) : span(container.begin(), container.end()) { }
 
         template<typename T>
-        span(std::initializer_list<T> l) : span(l.begin(), l.end()) { }
+        constexpr span(std::initializer_list<T> l) : span(l.begin(), l.end()) { }
 
         template<typename T, u64 N>
-        span(T(&arr)[N]) : span(arr, N) { }
+        constexpr span(T(&arr)[N]) : span(arr, N) { }
 
-        void clear() noexcept
+        constexpr void clear() noexcept
         {
             data_ = nullptr;
             size_ = 0;
         }
 
-        u64 size() const noexcept
+        constexpr u64 size() const noexcept
         {
             return size_;
         }
 
-        bool empty() const noexcept
+        constexpr bool empty() const noexcept
         {
             return !size_;
         }
 
-        span subspan(u64 begin = 0, u64 count = std::numeric_limits<u64>::max()) const
+        constexpr span subspan(u64 begin = 0, u64 count = std::numeric_limits<u64>::max()) const
         {
             if (count == std::numeric_limits<u64>::max())
                 return span(data_ + begin, data_ + size_);
             return span(data_ + begin, data_ + begin + count);
         }
 
-        reference front() const
+        constexpr reference front() const
         {
             return data_[0];
         }
 
-        reference back() const
+        constexpr reference back() const
         {
             return data_[size - 1];
         }
 
-        pointer data() const noexcept
+        constexpr pointer data() const noexcept
         {
             return data_;
         }
 
-        reference operator[](u64 i) const
+        constexpr reference operator[](u64 i) const
         {
             return data_[i];
         }
 
-        reference at(u64 i) const
+        constexpr reference at(u64 i) const
         {
             if (i >= size_)
                 throw std::out_of_range("span: Out of range");
             return operator[](i);
         }
 
-        iterator begin() const noexcept
+        constexpr iterator begin() const noexcept
         {
             return data_;
         }
 
-        iterator end() const noexcept
+        constexpr iterator end() const noexcept
         {
             return data_ + size_;
         }
 
-        const_iterator cbegin() const noexcept
+        constexpr const_iterator cbegin() const noexcept
         {
             return data_;
         }
 
-        const_iterator cend() const noexcept
+        constexpr const_iterator cend() const noexcept
         {
             return data_ + size_;
         }
 
-        reverse_iterator rbegin() const noexcept
+        constexpr reverse_iterator rbegin() const noexcept
         {
             return reverse_iterator(data_ + size_);
         }
 
-        reverse_iterator rend() const noexcept
+        constexpr reverse_iterator rend() const noexcept
         {
             return reverse_iterator(data_);
         }
 
-        const_reverse_iterator crbegin() const noexcept
+        constexpr const_reverse_iterator crbegin() const noexcept
         {
             return reverse_iterator(data_ + size_);
         }
 
-        const_reverse_iterator crend() const noexcept
+        constexpr const_reverse_iterator crend() const noexcept
         {
             return reverse_iterator(data_);
         }
