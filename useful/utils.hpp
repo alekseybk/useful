@@ -295,32 +295,49 @@ namespace uf
             return std::make_shared<std::remove_reference_t<Tp>>(std::forward<Tp>(obj));
         }
 
-        template<class T>
-        class reverse_wrapper
-        {
-            static_assert (!std::is_rvalue_reference_v<T>);
-            using holder_type = std::conditional_t<std::is_lvalue_reference_v<T>, T, std::remove_reference_t<T>>;
+        template<class Container>
+        class basic_reverse_wrapper;
 
-        private:
-            holder_type container_;
+        template<class Container>
+        class basic_reverse_wrapper<Container&>
+        {
+        protected:
+            Container& container_;
 
         public:
-            template<class Container>
-            reverse_wrapper(Container&& container) : container_(std::forward<Container>(container)) { }
+            basic_reverse_wrapper(Container& lref) : container_(lref) { }
+        };
+
+        template<class Container>
+        class basic_reverse_wrapper<Container&&>
+        {
+        protected:
+            Container container_;
+
+        public:
+            basic_reverse_wrapper(Container&& rref) : container_(std::move(rref)) { }
+        };
+
+        template<class Container>
+        class reverse_wrapper : public basic_reverse_wrapper<Container>
+        {
+        public:
+            template<typename C>
+            reverse_wrapper(C&& container) : basic_reverse_wrapper<Container>(std::forward<C>(container)) { }
 
             auto begin()
             {
-                return container_.rbegin();
+                return basic_reverse_wrapper<Container>::container_.rbegin();
             }
 
             auto end()
             {
-                return container_.rend();
+                return basic_reverse_wrapper<Container>::container_.rend();
             }
         };
 
-        template<class Container>
-        reverse_wrapper(Container&&) -> reverse_wrapper<Container>;
+        template<typename C>
+        reverse_wrapper(C&&) -> reverse_wrapper<C&&>;
 
         class spinlock
         {

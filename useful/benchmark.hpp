@@ -65,21 +65,13 @@ namespace uf
                 stopped_ = false;
                 begin_ += get_now_() - stop_;
             }
-
-            template<typename F, typename... Args>
-            double benchmark(F&& f, Args&&... args)
-            {
-                restart();
-                std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
-                return seconds();
-            }
         };
 
         auto create_tm()
         {
             using tm_type = time_meter<std::chrono::high_resolution_clock::time_point>;
 
-            static const auto get_sec = [](tm_type::time_point p1, tm_type::time_point p2)
+            static constexpr auto get_sec = [](tm_type::time_point p1, tm_type::time_point p2)
             {
                 return static_cast<double>((p2 - p1).count()) / std::chrono::high_resolution_clock::period::den;
             };
@@ -89,7 +81,7 @@ namespace uf
 
 #ifdef __linux__
 
-        auto create_ptm()
+        auto create_proc_tm()
         {
             using tm_type = time_meter<i64>;
 
@@ -114,6 +106,22 @@ namespace uf
         // TODO
 
 #endif
+
+        template<typename F, typename... Args>
+        double benchmark(F&& f, Args&&... args)
+        {
+            auto tm = create_tm();
+            std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            return tm.seconds();
+        }
+
+        template<typename F, typename... Args>
+        double proc_benchmark(F&& f, Args&&... args)
+        {
+            auto tm = create_proc_tm();
+            std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            return tm.seconds();
+        }
     }
     // inline namespace benchmark
 }
