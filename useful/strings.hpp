@@ -45,14 +45,14 @@ namespace uf
             return is_lower(c) || is_upper(c);
         }
 
-        void lowercase(std::string& s)
+        inline void lowercase(std::string& s)
         {
             for (char& c : s)
                 if (is_upper(c))
                     c += 'a' - 'A';
         }
 
-        void uppercase(std::string& s)
+        inline void uppercase(std::string& s)
         {
             for (char& c : s)
                 if (is_lower(c))
@@ -89,28 +89,27 @@ namespace uf
         {
             using iter = typename SeqContainer::const_iterator;
 
-            bool empty_seq = true;
+            iter next_begin = c.begin();
             std::vector<std::pair<iter, iter>> result;
+            if (!n)
+                return result;
             for (auto i = c.begin(); i != c.end(); ++i)
             {
-                if (satisfies_one(*i, ds...))
+                if (stf_one(*i, ds...))
                 {
-                    if (empty_seq)
-                        continue;
-                    result.back().second = i;
-                    empty_seq = true;
-                    if (result.size() == n)
-                        break;
-                }
-                else
-                {
-                    if (empty_seq)
+                    if (i == next_begin)
                     {
-                        empty_seq = false;
-                        result.push_back({i, c.end()});
+                        ++next_begin;
+                        continue;
                     }
+                    result.push_back({next_begin, i});
+                    next_begin = std::next(i);
+                    if (result.size() == n)
+                        return result;
                 }
             }
+            if (next_begin != c.end())
+                result.push_back({next_begin, c.end()});
             return result;
         }
 
@@ -143,19 +142,21 @@ namespace uf
         {
             using iter = typename SeqContainer::const_iterator;
 
+            iter next_begin = c.begin();
             std::vector<std::pair<iter, iter>> result;
-            iter next_item_begin = c.begin();
+            if (!n)
+                return result;
             for (auto i = c.begin(); i != c.end(); ++i)
             {
-                if (satisfies_one(*i, ds...))
+                if (stf_one(*i, ds...))
                 {
-                    result.push_back({next_item_begin, i});
+                    result.push_back({next_begin, i});
+                    next_begin = std::next(i);
                     if (result.size() == n)
                         return result;
-                    next_item_begin = i + 1;
                 }
             }
-            result.push_back({next_item_begin, c.end()});
+            result.push_back({next_begin, c.end()});
             return result;
         }
 
