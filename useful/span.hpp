@@ -55,8 +55,8 @@ namespace uf
         template<typename T>
         constexpr span(std::initializer_list<T> l) : span(l.begin(), l.end()) { }
 
-        template<typename T, u64 N>
-        constexpr span(T(&arr)[N]) : span(arr, N) { }
+        template<u64 N>
+        constexpr span(Tp(&arr)[N]) : span(arr, N) { }
 
         constexpr void clear() noexcept
         {
@@ -160,8 +160,5 @@ namespace uf
 
     template<typename T>
     span(std::initializer_list<T>) -> span<const T>;
-
-    template<typename T, u64 N>
-    span(T(&)[N]) -> span<T>;
 }
 // namespace uf

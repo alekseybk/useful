@@ -269,7 +269,7 @@ TEST(span)
     }
 
     {
-        int a1[5]{1, 2, 3, 4, 5};
+        const int a1[5]{1, 2, 3, 4, 5};
         span s1(a1);
         assert_eq(s1.size(), 5);
         assert_eq(s1[3], 4);
