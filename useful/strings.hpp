@@ -45,7 +45,7 @@ namespace uf
         void lstrip(SeqContainer& c, Ps&&... ps)
         {
             auto fwd = c.begin();
-            while (fwd != c.end() && std_any(*fwd, ps...))
+            while (fwd != c.end() && stf_any(*fwd, ps...))
                 ++fwd;
             c.erase(c.begin(), fwd);
         }
@@ -54,7 +54,7 @@ namespace uf
         void rstrip(SeqContainer& c, Ps&&... ps)
         {
             auto bck = c.rbegin();
-            while (bck != c.rend() && std_any(*bck, ps...))
+            while (bck != c.rend() && stf_any(*bck, ps...))
                 ++bck;
             c.erase(bck.base(), c.end());
         }
