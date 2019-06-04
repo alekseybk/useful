@@ -5,30 +5,30 @@
 
 using namespace uf;
 
-TEST(stf_one)
+TEST(stf_any)
 {
     {
         char c = 'a';
-        assert_true(stf_one(c, 'a'));
-        assert_true(stf_one(c, [](char c){ return c == 'a'; }));
-        assert_true(stf_one(c, [](char){ return false; }, 'a'));
-        assert_false(stf_one(c, [](char){ return false; }));
+        assert_true(stf_any(c, 'a'));
+        assert_true(stf_any(c, [](char c){ return c == 'a'; }));
+        assert_true(stf_any(c, [](char){ return false; }, 'a'));
+        assert_false(stf_any(c, [](char){ return false; }));
     }
 
     {
         int i = 5;
-        assert_true(stf_one(i, 5));
-        assert_true(stf_one(i, [](int i){ return i == 5; }));
-        assert_true(stf_one(i, [](int){ return false; }, 5));
-        assert_false(stf_one(i, [](int){ return false; }));
+        assert_true(stf_any(i, 5));
+        assert_true(stf_any(i, [](int i){ return i == 5; }));
+        assert_true(stf_any(i, [](int){ return false; }, 5));
+        assert_false(stf_any(i, [](int){ return false; }));
     }
 
     {
         std::string s = "12345";
-        assert_true(stf_one(s, "12345"));
-        assert_true(stf_one(s, [](const std::string& s){ return s == "12345"; }));
-        assert_true(stf_one(s, [](const std::string&){ return false; }, [](const std::string& s){ return s == "12345"; }));
-        assert_false(stf_one(s, [](const std::string&){ return false; }));
+        assert_true(stf_any(s, "12345"));
+        assert_true(stf_any(s, [](const std::string& s){ return s == "12345"; }));
+        assert_true(stf_any(s, [](const std::string&){ return false; }, [](const std::string& s){ return s == "12345"; }));
+        assert_false(stf_any(s, [](const std::string&){ return false; }));
     }
 }
 

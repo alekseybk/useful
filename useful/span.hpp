@@ -41,12 +41,12 @@ namespace uf
             using second = decltype(get_base_ptr(std::declval<T2&&>()));
             static_assert (std::is_same_v<first, second>);
 
-            auto bptr = get_base_ptr(end);
-            if (bptr < data_)
+            auto eptr = get_base_ptr(end);
+            if (eptr < data_)
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
-            if ((reinterpret_cast<u64>(bptr) - reinterpret_cast<u64>(data_)) % sizeof(Tp))
+            if ((reinterpret_cast<u64>(eptr) - reinterpret_cast<u64>(data_)) % sizeof(Tp))
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
-            size_ = bptr - data_;
+            size_ = eptr - data_;
         }
 
         template<typename C>

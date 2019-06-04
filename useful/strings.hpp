@@ -25,45 +25,27 @@ namespace uf
 
     inline namespace strings
     {
-        constexpr bool is_digit(char c) noexcept
+        template<typename S>
+        std::string lowercase(S&& s)
         {
-            return c >= '0' && c <= '9';
+            std::string result(std::forward<S>(s));
+            std::for_each(result.begin(), result.end(), [](auto& c){ c = std::tolower(c); });
+            return result;
         }
 
-        constexpr bool is_lower(char c) noexcept
+        template<typename S>
+        std::string uppercase(S&& s)
         {
-            return c >= 'a' && c <= 'z';
-        }
-
-        constexpr bool is_upper(char c) noexcept
-        {
-            return c >= 'A' && c <= 'Z';
-        }
-
-        constexpr bool is_letter(char c) noexcept
-        {
-            return is_lower(c) || is_upper(c);
-        }
-
-        inline void lowercase(std::string& s)
-        {
-            for (char& c : s)
-                if (is_upper(c))
-                    c += 'a' - 'A';
-        }
-
-        inline void uppercase(std::string& s)
-        {
-            for (char& c : s)
-                if (is_lower(c))
-                    c -= 'a' - 'A';
+            std::string result(std::forward<S>(s));
+            std::for_each(result.begin(), result.end(), [](auto& c){ c = std::toupper(c); });
+            return result;
         }
 
         template<class SeqContainer, typename... Ps>
         void lstrip(SeqContainer& c, Ps&&... ps)
         {
             auto fwd = c.begin();
-            while (fwd != c.end() && satisfies_one(*fwd, ps...))
+            while (fwd != c.end() && std_any(*fwd, ps...))
                 ++fwd;
             c.erase(c.begin(), fwd);
         }
@@ -72,7 +54,7 @@ namespace uf
         void rstrip(SeqContainer& c, Ps&&... ps)
         {
             auto bck = c.rbegin();
-            while (bck != c.rend() && satisfies_one(*bck, ps...))
+            while (bck != c.rend() && std_any(*bck, ps...))
                 ++bck;
             c.erase(bck.base(), c.end());
         }
@@ -95,7 +77,7 @@ namespace uf
                 return result;
             for (auto i = c.begin(); i != c.end(); ++i)
             {
-                if (stf_one(*i, ds...))
+                if (stf_any(*i, ds...))
                 {
                     if (i == next_begin)
                     {
@@ -148,7 +130,7 @@ namespace uf
                 return result;
             for (auto i = c.begin(); i != c.end(); ++i)
             {
-                if (stf_one(*i, ds...))
+                if (stf_any(*i, ds...))
                 {
                     result.push_back({next_begin, i});
                     next_begin = std::next(i);

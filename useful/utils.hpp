@@ -44,24 +44,6 @@ namespace uf
         {
             return std::make_tuple(std::get<Ns>(std::forward<T>(t))...);
         }
-
-        template<typename Index, typename Tp, class F>
-        Index binary_search_impl(Index left, Index right, Index end, Tp&& value, F&& f)
-        {
-            const auto diff = right - left;
-            if (diff <= 1)
-            {
-                if (f(right) == value)
-                    return right;
-                if (f(left) == value)
-                    return left;
-                return end;
-            }
-            const Index middle = left + diff / 2;
-            if (f(middle) < value)
-                return binary_search_impl(middle, right, end, std::forward<Tp>(value), std::forward<F>(f));
-            return binary_search_impl(left, middle, end, std::forward<Tp>(value), std::forward<F>(f));
-        }
     }
     // namespace detail
 
@@ -89,7 +71,7 @@ namespace uf
         }
 
         template<class E, class... Ps>
-        constexpr bool stf_one(const E& e, Ps&&... ps)
+        constexpr bool stf_any(const E& e, Ps&&... ps)
         {
             return (stf(e, ps) || ...);
         }
@@ -101,9 +83,9 @@ namespace uf
         }
 
         template<class... Ps>
-        constexpr auto stf_one_obj(Ps&&... ps)
+        constexpr auto stf_any_obj(Ps&&... ps)
         {
-            return std::bind([](const auto& e, Ps&... ps){ return stf_one(e, ps...); }, std::placeholders::_1, std::forward<Ps>(ps)...);
+            return std::bind([](const auto& e, Ps&... ps){ return stf_any(e, ps...); }, std::placeholders::_1, std::forward<Ps>(ps)...);
         }
 
         template<class... Ps>
@@ -197,7 +179,7 @@ namespace uf
         {
             for (auto i = c.begin(); i != c.end();)
             {
-                if (stf_one(*i, rs...))
+                if (stf_any(*i, rs...))
                     i = c.erase(i);
                 else
                     ++i;
@@ -209,17 +191,51 @@ namespace uf
         {
             AssocContainer result;
             for (auto i = c.begin(); i != c.end(); ++i)
-                if (!stf_one(*i, rs...))
+                if (!stf_any(*i, rs...))
                     result.insert(*i);
             return result;
         }
 
         template<typename Index, typename Tp, class F>
-        Index binary_search(Index left, Index right, Tp&& value, F&& f)
+        std::pair<bool, Index> binary_search_upper(Index begin, Index end, Tp&& value, F&& f)
         {
-            if (left >= right)
-                return right;
-            return detail::binary_search_impl(left, right - 1, right, value, std::forward<F>(f));
+            const auto diff = end - begin;
+            if (!diff)
+                return {false, end};
+            if (diff == 1)
+                return {f(begin) == value, begin};
+            if (diff == 2)
+            {
+                auto x = f(begin + 1);
+                if (x == value)
+                    return {true, begin + 1};
+                return {f(begin) == value, begin};
+            }
+            const Index middle = begin + (end - begin) / 2;
+            if (value >= f(middle))
+                return binary_search_upper(middle, end, value, f);
+            return binary_search_upper(begin, middle, value, f);
+        }
+
+        template<typename Index, typename Tp, class F>
+        std::pair<bool, Index> binary_search_lower(Index begin, Index end, Tp&& value, F&& f)
+        {
+            const auto diff = end - begin;
+            if (!diff)
+                return {false, end};
+            if (diff == 1)
+                return {f(begin) == value, begin};
+            if (diff == 2)
+            {
+                auto x = f(begin);
+                if (x == value)
+                    return {true, begin};
+                return {f(begin + 1) == value, begin + 1};
+            }
+            const Index middle = begin + (end - begin) / 2;
+            if (value <= f(middle))
+                return binary_search_lower(begin, middle + 1, value, f);
+            return binary_search_lower(middle + 1, end, value, f);
         }
 
         template<typename T>
