@@ -5,21 +5,7 @@ namespace uf
 {
     namespace detail
     {
-        template<class SeqContainer, class IterVector>
-        auto build_split_vector(IterVector&& iters)
-        {
-            std::vector<SeqContainer> result;
-            result.reserve(iters.size());
-            for (auto [b, e] : iters)
-                result.emplace_back(b, e);
-            return result;
-        }
 
-        template<class SeqContainer, class IterVector, u64... Ns>
-        auto build_split_tuple(IterVector&& iters, sequence<Ns...>)
-        {
-            return std::tuple(SeqContainer(iters[Ns].first, iters[Ns].second)...);
-        }
     }
     // namespace detail
 
@@ -66,104 +52,53 @@ namespace uf
             rstrip(c, ps...);
         }
 
-        template<class SeqContainer, class... Ds>
-        auto split_itr(u64 n, const SeqContainer& c, Ds&&... ds)
+        template<class SeqContainer, typename... Ds>
+        auto split_itr_n(const SeqContainer& c, u64 n, Ds&&... ds)
         {
             using iter = typename SeqContainer::const_iterator;
 
-            iter next_begin = c.begin();
             std::vector<std::pair<iter, iter>> result;
-            if (!n)
-                return result;
-            for (auto i = c.begin(); i != c.end(); ++i)
+            auto&& fobject = stf_any_obj(std::forward<Ds>(ds)...);
+            auto wrp = std::ref(fobject);
+            iter next_begin = std::find_if_not(c.begin(), c.end(), wrp);
+            while (n && next_begin != c.end())
             {
-                if (stf_any(*i, ds...))
-                {
-                    if (i == next_begin)
-                    {
-                        ++next_begin;
-                        continue;
-                    }
-                    result.push_back({next_begin, i});
-                    next_begin = std::next(i);
-                    if (result.size() == n)
-                        return result;
-                }
+                iter next_delimiter = std::find_if(std::next(next_begin), c.end(), wrp);
+                result.push_back({next_begin, next_delimiter});
+                if (next_delimiter == c.end())
+                    break;
+                next_begin = std::find_if_not(std::next(next_delimiter), c.end(), wrp);
+                --n;
             }
-            if (next_begin != c.end())
-                result.push_back({next_begin, c.end()});
             return result;
         }
 
-        template<class SeqContainer, class... Ds>
+        template<class SeqContainer, typename... Ds>
         auto split_itr(const SeqContainer& c, Ds&&... ds)
         {
-            return split_itr(std::numeric_limits<u64>::max(), c, ds...);
+            return split_itr_n(c, std::numeric_limits<u64>::max(), ds...);
         }
 
-        template<class SeqContainer, class... Ds>
-        auto split(u64 n, const SeqContainer& c, Ds&&... ds)
+        template<class SeqContainer>
+        auto build_split_vector(const std::vector<std::pair<typename SeqContainer::const_iterator, typename SeqContainer::const_iterator>>& bounds)
         {
-            return detail::build_split_vector<SeqContainer>(split_itr(n, c, ds...));
-        }
-
-        template<class SeqContainer, class... Ds>
-        auto split(const SeqContainer& c, Ds&&... ds)
-        {
-            return split(std::numeric_limits<u64>::max(), c, ds...);
-        }
-
-        template<u64 N, class SeqContainer, class... Ds>
-        auto split(const SeqContainer& c, Ds&&... ds)
-        {
-            return detail::build_split_tuple<SeqContainer>(split_itr(c, ds...), make_sequence<N>());
-        }
-
-        template<class SeqContainer, class... Ds>
-        auto split_strong_itr(u64 n, const SeqContainer& c, Ds&&... ds)
-        {
-            using iter = typename SeqContainer::const_iterator;
-
-            iter next_begin = c.begin();
-            std::vector<std::pair<iter, iter>> result;
-            if (!n)
-                return result;
-            for (auto i = c.begin(); i != c.end(); ++i)
-            {
-                if (stf_any(*i, ds...))
-                {
-                    result.push_back({next_begin, i});
-                    next_begin = std::next(i);
-                    if (result.size() == n)
-                        return result;
-                }
-            }
-            result.push_back({next_begin, c.end()});
+            std::vector<SeqContainer> result;
+            result.reserve(bounds.size());
+            for (auto [b, e] : bounds)
+                result.emplace_back(b, e);
             return result;
         }
 
-        template<class SeqContainer, class... Ds>
-        auto split_strong_itr(const SeqContainer& c, Ds&&... ds)
+        template<class SeqContainer, typename... Ds>
+        auto split_n(const SeqContainer& c, u64 n, Ds&&... ds)
         {
-            return split_strong_itr(std::numeric_limits<u64>::max(), c, ds...);
+            return build_split_vector<SeqContainer>(split_itr_n(c, n, ds...));
         }
 
-        template<class SeqContainer, class... Ds>
-        auto split_strong(u64 n, const SeqContainer& c, Ds&&... ds)
+        template<class SeqContainer, typename... Ds>
+        auto split(const SeqContainer& c, Ds&&... ds)
         {
-            return detail::build_split_vector<SeqContainer>(split_strong_itr(n, c, ds...));
-        }
-
-        template<class SeqContainer, class... Ds>
-        auto split_strong(const SeqContainer& c, Ds&&... ds)
-        {
-            return split_strong(std::numeric_limits<u64>::max(), c, ds...);
-        }
-
-        template<u64 N, class SeqContainer, class... Ds>
-        auto split_strong(const SeqContainer& c, Ds&&... ds)
-        {
-            return detail::build_split_tuple<SeqContainer>(split_strong_itr(c, ds...), make_sequence<N>());
+            return split_n(c, std::numeric_limits<u64>::max(), ds...);
         }
 
         template<class C1, class C2, disif<std::is_convertible_v<C2, typename C1::value_type>> = sdef>
