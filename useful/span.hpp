@@ -88,7 +88,7 @@ namespace uf
 
         constexpr reference back() const
         {
-            return data_[size - 1];
+            return data_[size_ - 1];
         }
 
         constexpr pointer data() const noexcept

@@ -59,9 +59,8 @@ namespace uf
 
             std::vector<std::pair<iter, iter>> result;
             auto&& fobject = stf_any_obj(std::forward<Ds>(ds)...);
-            auto wrp = std::ref(fobject);
-            iter next_begin = std::find_if_not(c.begin(), c.end(), wrp);
-            while (n && next_begin != c.end())
+            const auto wrp = std::ref(fobject);
+            for (iter next_begin = std::find_if_not(c.begin(), c.end(), wrp); n && next_begin != c.end();)
             {
                 iter next_delimiter = std::find_if(std::next(next_begin), c.end(), wrp);
                 result.push_back({next_begin, next_delimiter});
