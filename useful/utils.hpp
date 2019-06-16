@@ -50,13 +50,13 @@ namespace uf
     inline namespace utils
     {
         template<typename Container, typename E, enif<std::is_lvalue_reference_v<Container>> = sdef>
-        constexpr auto&& forward_element(E&& e)
+        constexpr auto&& forward_element(E&& e) noexcept
         {
             return std::forward<E>(e);
         }
 
         template<typename Container, typename E, enif<!std::is_reference_v<Container>> = sdef>
-        constexpr auto&& forward_element(E&& e)
+        constexpr auto&& forward_element(E&& e) noexcept
         {
             return std::move(e);
         }
@@ -85,13 +85,31 @@ namespace uf
         template<class... Ps>
         constexpr auto stf_any_obj(Ps&&... ps)
         {
-            return std::bind([](const auto& e, Ps&... ps){ return stf_any(e, ps...); }, std::placeholders::_1, std::forward<Ps>(ps)...);
+            return [ps...](const auto& e) mutable { return stf_any(e, ps...); }; // TODO: forward capture
         }
 
         template<class... Ps>
         constexpr auto stf_all_obj(Ps&&... ps)
         {
-            return std::bind([](const auto& e, Ps&... ps){ return stf_all(e, ps...); }, std::placeholders::_1, std::forward<Ps>(ps)...);
+            return [ps...](const auto& e) mutable { return stf_all(e, ps...); }; // TODO: forward capture
+        }
+
+        template<typename P>
+        auto stf_first_obj(P&& p)
+        {
+            return [p = std::forward<P>(p)](const auto& x) mutable { return stf(x.first, p); };
+        }
+
+        template<typename P>
+        auto stf_second_obj(P&& p)
+        {
+            return [p = std::forward<P>(p)](const auto& x) mutable { return stf(x.second, p); };
+        }
+
+        template<u64 N, typename P>
+        auto stf_nth_obj(P&& p)
+        {
+            return [p = std::forward<P>(p)](const auto& x) mutable { return stf(std::get<N>(x), p); };
         }
 
         template<u64 N, typename Tp>
@@ -156,23 +174,7 @@ namespace uf
                     for_each_trg<Tp>(forward_element<C>(value), f);
         }
 
-        template<typename P>
-        auto stf_first_obj(P&& p)
-        {
-            return [p = std::forward<P>(p)](const auto& x) mutable -> bool { return stf(x.first, p); };
-        }
 
-        template<typename P>
-        auto stf_second_obj(P&& p)
-        {
-            return [p = std::forward<P>(p)](const auto& x) mutable -> bool { return stf(x.second, p); };
-        }
-
-        template<u64 N, typename P>
-        auto stf_nth_obj(P&& p)
-        {
-            return [p = std::forward<P>(p)](const auto& x) mutable -> bool { return stf(std::get<N>(x), p); };
-        }
 
         template<class AssocContainer, class... Rs>
         void remove_associative(AssocContainer& c, Rs&&... rs)
@@ -206,7 +208,7 @@ namespace uf
                 return {f(begin) == value, begin};
             if (diff == 2)
             {
-                auto x = f(begin + 1);
+                const auto x = f(begin + 1);
                 if (x == value)
                     return {true, begin + 1};
                 return {f(begin) == value, begin};
@@ -227,7 +229,7 @@ namespace uf
                 return {f(begin) == value, begin};
             if (diff == 2)
             {
-                auto x = f(begin);
+                const auto x = f(begin);
                 if (x == value)
                     return {true, begin};
                 return {f(begin + 1) == value, begin + 1};
