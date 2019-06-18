@@ -502,14 +502,14 @@ namespace uf::mt
     DECLARE_N1(is_iterator, typename);
 
     template<typename Tp>
-    struct is_reverse_iterator : std::bool_constant<is_iterator_v<Tp> && is_instantiated_from_v<std::reverse_iterator, Tp>> { };
+    struct is_reverse_iterator : std::bool_constant<is_instantiated_from_v<std::reverse_iterator, Tp>> { };
 
     DECLARE_N1(is_reverse_iterator, typename);
 
     template<typename Tp>
-    struct is_forward_iterator : std::bool_constant<is_iterator_v<Tp> && !is_reverse_iterator_v<Tp>> { };
+    struct is_usual_iterator : std::bool_constant<is_iterator_v<Tp> && !is_reverse_iterator_v<Tp>> { };
 
-    DECLARE_N1(is_forward_iterator, typename);
+    DECLARE_N1(is_usual_iterator, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_random_access_iterator : std::false_type { };

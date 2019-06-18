@@ -31,26 +31,19 @@ namespace uf
 
         span& operator=(const span&) noexcept = default;
 
-        template<typename T1>
-        constexpr span(T1&& begin, u64 count) : data_(get_base_ptr(begin)), size_(count) { }
+        constexpr span(Tp* begin, u64 count) : data_(begin), size_(count) { }
 
-        template<typename T1, typename T2, disif<std::is_integral_v<std::decay_t<T2>>> = sdef>
-        constexpr span(T1&& begin, T2&& end) : data_(get_base_ptr(begin))
+        constexpr span(Tp* begin, Tp* end) : data_(begin)
         {
-            using first = decltype(get_base_ptr(std::declval<T1&&>()));
-            using second = decltype(get_base_ptr(std::declval<T2&&>()));
-            static_assert (std::is_same_v<first, second>);
-
-            auto eptr = get_base_ptr(end);
-            if (eptr < data_)
+            if (end < begin)
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
-            if ((reinterpret_cast<u64>(eptr) - reinterpret_cast<u64>(data_)) % sizeof(Tp))
+            if ((reinterpret_cast<u64>(end) - reinterpret_cast<u64>(begin)) % sizeof(Tp))
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
-            size_ = eptr - data_;
+            size_ = end - begin;
         }
 
-        template<typename C>
-        constexpr span(C&& container) : span(container.begin(), container.end()) { }
+        template<typename Container>
+        constexpr span(Container& container) : span(container.data(), container.size()) { }
 
         template<typename T>
         constexpr span(std::initializer_list<T> l) : span(l.begin(), l.end()) { }
@@ -149,14 +142,8 @@ namespace uf
         }
     };
 
-    template<typename T1>
-    span(T1&&, u64) -> span<std::remove_pointer_t<decltype(get_base_ptr(std::declval<T1&&>()))>>;
-
-    template<typename T1, typename T2>
-    span(T1&&, T2&&) -> span<std::remove_pointer_t<decltype(get_base_ptr(std::declval<T1&&>()))>>;
-
-    template<typename C, sfinae = sdef>
-    span(C&&) -> span<std::remove_pointer_t<decltype(get_base_ptr(std::declval<C&&>().begin()))>>;
+    template<typename Container>
+    span(Container& container) -> span<std::remove_pointer_t<decltype(container.data())>>;
 
     template<typename T>
     span(std::initializer_list<T>) -> span<const T>;

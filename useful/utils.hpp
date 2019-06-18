@@ -134,50 +134,36 @@ namespace uf
             return detail::tuple_transform_helper(make_sequence<size>(), std::forward<F>(f), std::forward<Ts>(ts)...);
         }
 
-        template<class R, class SeqContainer>
-        R add_positions(SeqContainer&& x)
+        template<typename RandomAccessIterator, typename Compare>
+        std::vector<u64> sort_with_pos(RandomAccessIterator begin, RandomAccessIterator end, Compare&& cmp)
         {
-            R result;
-            result.reserve(x.size());
-            u64 j = 0;
-            for (auto i = x.begin(); i != x.end(); ++i, ++j)
-                result.emplace_back(j, forward_element<SeqContainer>(*i));
-            return result;
-        }
-
-        template<class SeqContainer>
-        auto add_positions(SeqContainer&& x)
-        {
-            return add_positions<mt::instance_info<std::decay_t<SeqContainer>>::template type<std::pair<u64, typename std::decay_t<SeqContainer>::value_type>>>>(std::forward<SeqContainer>(x));
-        }
-
-        template<class SeqContainer, typename Compare>
-        auto add_positions_and_sort(SeqContainer&& c, Compare&& compare)
-        {
-            auto result = add_positions(std::forward<SeqContainer>(c));
-            std::sort(result.begin(), result.end(), [&compare](const auto& e1, const auto& e2)
+            std::vector<u64> pos(std::distance(begin, end));
+            std::iota(pos.begin(), pos.end(), 0);
+            std::stable_sort(pos.begin(), pos.end(), [&](const auto& e1, const auto& e2)
             {
-                return compare(e1.second, e2.second);
+                return cmp(*(begin + e1), *(begin + e2));
             });
-            return result;
+            std::unordered_map<u64, typename RandomAccessIterator::value_type> m;
+            for (u64 i = 0; i < pos.size(); ++i)
+            {
+                if (i != pos[i])
+                {
+                    m.insert({i, std::move(*(begin + i))});
+                    const auto j = m.find(pos[i]);
+                    if (j != m.end())
+                    {
+                        *(begin + i) = std::move(j->second);
+                        m.erase(j);
+                    }
+                    else
+                        *(begin + i) = std::move(*(begin + pos[i]));
+                }
+            }
+            return pos;
         }
 
-        template<typename Tp, typename C, typename F>
-        void for_each_trg(C&& c, F&& f)
-        {
-            using value_type = typename std::decay_t<C>::value_type;
-
-            if constexpr (std::is_same_v<Tp, value_type>)
-                std::for_each(c.begin(), c.end(), f);
-            else
-                for (auto& value : c)
-                    for_each_trg<Tp>(forward_element<C>(value), f);
-        }
-
-
-
-        template<class AssocContainer, class... Rs>
-        void remove_associative(AssocContainer& c, Rs&&... rs)
+        template<class Associative, class... Rs>
+        void remove_associative(Associative& c, Rs&&... rs)
         {
             for (auto i = c.begin(); i != c.end();)
             {
@@ -188,10 +174,10 @@ namespace uf
             }
         }
 
-        template<class AssocContainer, class... Rs>
-        AssocContainer remove_associative_copy(const AssocContainer& c, Rs&&... rs)
+        template<class Associative, class... Rs>
+        Associative remove_associative_copy(const Associative& c, Rs&&... rs)
         {
-            AssocContainer result;
+            Associative result;
             for (auto i = c.begin(); i != c.end(); ++i)
                 if (!stf_any(*i, rs...))
                     result.insert(*i);
@@ -240,21 +226,28 @@ namespace uf
             return binary_search_lower(middle + 1, end, value, f);
         }
 
-        template<typename T>
+        template<typename T, enif<std::is_pointer_v<std::decay_t<T>>> = sdef>
         constexpr auto* get_base_ptr(T&& object)
         {
-            using decayed = std::decay_t<T>;
+            return object;
+        }
 
-            if constexpr (std::is_pointer_v<decayed>)
-                return object;
-            else if constexpr (mt::is_forward_iterator_v<decayed>)
-                return object.base();
-            else if constexpr (mt::is_reverse_iterator_v<decayed>)
-                return object.base().base() - 1;
-            else if constexpr (mt::is_smart_pointer_v<decayed>)
-                return object.get();
-            else
-                return &(*object);
+        template<typename T, enif<mt::is_usual_iterator_v<std::decay_t<T>> && !std::is_pointer_v<std::decay_t<T>>> = sdef>
+        constexpr auto* get_base_ptr(T&& object)
+        {
+            return object.base();
+        }
+
+        template<typename T, enif<mt::is_reverse_iterator_v<std::decay_t<T>>> = sdef>
+        constexpr auto* get_base_ptr(T&& object)
+        {
+            return get_base_ptr(std::prev(object.base()));
+        }
+
+        template<typename T, enif<mt::is_smart_pointer_v<std::decay_t<T>>> = sdef>
+        constexpr auto* get_base_ptr(T&& object)
+        {
+            return object.get();
         }
 
         template<u64 B = 0, u64 E = std::numeric_limits<u64>::max(), typename T>
@@ -367,11 +360,11 @@ namespace uf
                 return !flag_.test_and_set(std::memory_order_acquire);
             }
 
-            template<typename Period>
-            void lock(i64 count)
+            template<typename Duration>
+            void lock(Duration duration)
             {
                 while (flag_.test_and_set(std::memory_order_acquire))
-                    std::this_thread::sleep_for(std::chrono::duration<i64, Period>(count));
+                    std::this_thread::sleep_for(duration);
             }
 
             void lock()

@@ -28,6 +28,8 @@
 #include <future>
 #include <chrono>
 #include <any>
+#include <numeric>
+#include <algorithm>
 
 #include "base.hpp"
 
