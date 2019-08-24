@@ -25,7 +25,7 @@ namespace uf
         // inline namespace sized
 
         enum class sfinae;
-        inline constexpr sfinae sdef{0};
+        inline constexpr sfinae SF{0};
 
         template<typename... Ts>
         using sfinae_t = sfinae;

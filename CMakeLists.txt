@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(useful)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pedantic-errors -ferror-limit=1")
 
 file(GLOB headers "useful/*.hpp")
 file(GLOB test_headers "test/*.hpp")

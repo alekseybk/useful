@@ -11,45 +11,70 @@ namespace uf
 
     inline namespace strings
     {
-        template<typename S>
-        std::string lowercase(S&& s)
+        inline std::string lowercase(const std::string& s)
         {
-            std::string result(std::forward<S>(s));
-            std::for_each(result.begin(), result.end(), [](auto& c){ c = std::tolower(c); });
+            std::string result;
+            result.reserve(s.size());
+            for (auto c : s)
+                result.push_back(std::tolower(c));
             return result;
         }
 
-        template<typename S>
-        std::string uppercase(S&& s)
+        inline std::string lowercase(std::string&& s)
         {
-            std::string result(std::forward<S>(s));
-            std::for_each(result.begin(), result.end(), [](auto& c){ c = std::toupper(c); });
+            std::string result(std::move(s));
+            for (auto& c : result)
+                c = std::tolower(c);
+            return result;
+        }
+
+        inline std::string uppercase(const std::string& s)
+        {
+            std::string result;
+            result.reserve(s.size());
+            for (auto c : s)
+                result.push_back(std::toupper(c));
+            return result;
+        }
+
+        inline std::string uppercase(std::string&& s)
+        {
+            std::string result(std::move(s));
+            for (auto& c : result)
+                c = std::toupper(c);
             return result;
         }
 
         template<class SeqContainer, typename... Ps>
-        void lstrip(SeqContainer& c, Ps&&... ps)
+        auto lstrip(const SeqContainer& c, Ps&&... ps)
         {
-            auto fwd = c.begin();
-            while (fwd != c.end() && stf_any(*fwd, ps...))
-                ++fwd;
-            c.erase(c.begin(), fwd);
+            auto new_first = c.begin();
+            while (new_first != c.end() && stf_any(*new_first, ps...))
+                ++new_first;
+            return SeqContainer(new_first, c.end());
         }
 
         template<class SeqContainer, typename... Ps>
-        void rstrip(SeqContainer& c, Ps&&... ps)
+        auto rstrip(const SeqContainer& c, Ps&&... ps)
         {
-            auto bck = c.rbegin();
-            while (bck != c.rend() && stf_any(*bck, ps...))
-                ++bck;
-            c.erase(bck.base(), c.end());
+            auto new_last = c.rbegin();
+            while (new_last != c.rend() && stf_any(*new_last, ps...))
+                ++new_last;
+            return SeqContainer(c.begin(), new_last.base());
         }
 
         template<class SeqContainer, typename... Ps>
-        void strip(SeqContainer& c, Ps&&... ps)
+        auto strip(const SeqContainer& c, Ps&&... ps)
         {
-            lstrip(c, ps...);
-            rstrip(c, ps...);
+            auto new_first = c.begin();
+            while (new_first != c.end() && stf_any(*new_first, ps...))
+                ++new_first;
+            auto new_last = c.rbegin();
+            while (new_last != c.rend() && stf_any(*new_last, ps...))
+                ++new_last;
+            if (new_last.base() <= new_first)
+                return SeqContainer{ };
+            return SeqContainer(new_first, new_last.base());
         }
 
         template<class SeqContainer, typename... Ds>
@@ -100,7 +125,7 @@ namespace uf
             return split_n(c, std::numeric_limits<u64>::max(), ds...);
         }
 
-        template<class C1, class C2, disif<std::is_convertible_v<C2, typename C1::value_type>> = sdef>
+        template<class C1, class C2, disif<std::is_convertible_v<C2, typename C1::value_type>> = SF>
         bool starts_with(const C1& c, const C2& pattern)
         {
             auto i1 = std::begin(c);
@@ -111,13 +136,13 @@ namespace uf
             return i2 == std::end(pattern) ? true : false;
         }
 
-        template<class C, class E, enif<std::is_convertible_v<E, typename C::value_type>> = sdef>
+        template<class C, class E, enif<std::is_convertible_v<E, typename C::value_type>> = SF>
         bool starts_with(const C& c, const E& e)
         {
             return !c.empty() && *std::begin(c) == e;
         }
 
-        template<class C1, class C2, disif<std::is_convertible_v<C2, typename C1::value_type>> = sdef>
+        template<class C1, class C2, disif<std::is_convertible_v<C2, typename C1::value_type>> = SF>
         bool ends_with(const C1& c, const C2& pattern)
         {
             auto i1 = std::rbegin(c);
@@ -128,7 +153,7 @@ namespace uf
             return i2 == std::rend(pattern) ? true : false;
         }
 
-        template<class C, class E, enif<std::is_convertible_v<E, typename C::value_type>> = sdef>
+        template<class C, class E, enif<std::is_convertible_v<E, typename C::value_type>> = SF>
         bool ends_with(const C& c, const E& e)
         {
             return !c.empty() && *std::rbegin(c) == e;

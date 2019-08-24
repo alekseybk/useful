@@ -67,7 +67,7 @@ namespace uf
             return !size_;
         }
 
-        constexpr span subspan(u64 begin = 0, u64 count = std::numeric_limits<u64>::max()) const
+        constexpr span subspan(u64 begin, u64 count = std::numeric_limits<u64>::max()) const
         {
             if (count == std::numeric_limits<u64>::max())
                 return span(data_ + begin, data_ + size_);

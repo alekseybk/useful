@@ -49,13 +49,13 @@ namespace uf
 
     inline namespace utils
     {
-        template<typename Container, typename E, enif<std::is_lvalue_reference_v<Container>> = sdef>
+        template<typename Container, typename E, enif<std::is_lvalue_reference_v<Container>> = SF>
         constexpr auto&& forward_element(E&& e) noexcept
         {
             return std::forward<E>(e);
         }
 
-        template<typename Container, typename E, enif<!std::is_reference_v<Container>> = sdef>
+        template<typename Container, typename E, enif<!std::is_reference_v<Container>> = SF>
         constexpr auto&& forward_element(E&& e) noexcept
         {
             return std::move(e);
@@ -141,23 +141,22 @@ namespace uf
             std::iota(pos.begin(), pos.end(), 0);
             std::stable_sort(pos.begin(), pos.end(), [&](const auto& e1, const auto& e2)
             {
-                return cmp(*(begin + e1), *(begin + e2));
+                return cmp(*( begin + e1), *(begin + e2));
             });
+            std::vector<u8> used(pos.size(), 0);
             std::unordered_map<u64, typename RandomAccessIterator::value_type> m;
             for (u64 i = 0; i < pos.size(); ++i)
             {
-                if (i != pos[i])
-                {
+                if (i == pos[i])
+                    continue;
+                used[pos[i]] = 1;
+                if (!used[i])
                     m.insert({i, std::move(*(begin + i))});
-                    const auto j = m.find(pos[i]);
-                    if (j != m.end())
-                    {
-                        *(begin + i) = std::move(j->second);
-                        m.erase(j);
-                    }
-                    else
-                        *(begin + i) = std::move(*(begin + pos[i]));
-                }
+                const auto j = m.find(pos[i]);
+                if (j != m.end())
+                    *(begin + i) = std::move(j->second);
+                else
+                    *(begin + i) = std::move(*(begin + pos[i]));
             }
             return pos;
         }
@@ -226,25 +225,25 @@ namespace uf
             return binary_search_lower(middle + 1, end, value, f);
         }
 
-        template<typename T, enif<std::is_pointer_v<std::decay_t<T>>> = sdef>
+        template<typename T, enif<std::is_pointer_v<std::decay_t<T>>> = SF>
         constexpr auto* get_base_ptr(T&& object)
         {
             return object;
         }
 
-        template<typename T, enif<mt::is_usual_iterator_v<std::decay_t<T>> && !std::is_pointer_v<std::decay_t<T>>> = sdef>
+        template<typename T, enif<mt::is_usual_iterator_v<std::decay_t<T>> && !std::is_pointer_v<std::decay_t<T>>> = SF>
         constexpr auto* get_base_ptr(T&& object)
         {
             return object.base();
         }
 
-        template<typename T, enif<mt::is_reverse_iterator_v<std::decay_t<T>>> = sdef>
+        template<typename T, enif<mt::is_reverse_iterator_v<std::decay_t<T>>> = SF>
         constexpr auto* get_base_ptr(T&& object)
         {
             return get_base_ptr(std::prev(object.base()));
         }
 
-        template<typename T, enif<mt::is_smart_pointer_v<std::decay_t<T>>> = sdef>
+        template<typename T, enif<mt::is_smart_pointer_v<std::decay_t<T>>> = SF>
         constexpr auto* get_base_ptr(T&& object)
         {
             return object.get();

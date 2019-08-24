@@ -111,7 +111,7 @@ namespace uf
         double benchmark(F&& f, Args&&... args)
         {
             auto tm = create_tm();
-            std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            std::invoke(f, std::forward<Args>(args)...);
             return tm.seconds();
         }
 
@@ -119,7 +119,7 @@ namespace uf
         double proc_benchmark(F&& f, Args&&... args)
         {
             auto tm = create_proc_tm();
-            std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            std::invoke(f, std::forward<Args>(args)...);
             return tm.seconds();
         }
     }
