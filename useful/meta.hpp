@@ -151,7 +151,7 @@ namespace uf::mt
         DECLARE_N1(seq_last, typename);
 
         template<typename S, u64... Ns>
-        struct seq_select : type_identity<sequence<S::template get<Ns>()...>> { };
+        struct seq_select : type_identity<sequence<S::template value<Ns>...>> { };
 
         DECLARE_T2S(seq_select, typename, u64...);
 
