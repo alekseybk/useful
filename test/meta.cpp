@@ -48,3 +48,17 @@ TEST(seq_remove)
     assert_true((std::is_same_v<seq_remove_t<sequence<>, 2, 3, 4, 5, 6>, sequence<>>));
 }
 
+TEST(seq_one_value)
+{
+    assert_true((std::is_same_v<seq_one_value_t<3, 4>, sequence<3, 3, 3, 3>>));
+    assert_true((std::is_same_v<seq_one_value_t<3, 0>, sequence<>>));
+}
+
+
+TEST(tuple_one_type)
+{
+    assert_true((std::is_same_v<tuple_one_type_t<int, 4>, std::tuple<int, int, int, int>>));
+    assert_true((std::is_same_v<tuple_one_type_t<int, 0>, std::tuple<>>));
+}
+
+

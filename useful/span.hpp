@@ -21,8 +21,8 @@ namespace uf
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     private:
-        pointer data_ = nullptr;
-        u64 size_ = 0;
+        pointer m_data = nullptr;
+        u64 m_size = 0;
 
     public:
         span() noexcept = default;
@@ -31,15 +31,15 @@ namespace uf
 
         span& operator=(const span&) noexcept = default;
 
-        constexpr span(Tp* begin, u64 count) : data_(begin), size_(count) { }
+        constexpr span(Tp* begin, u64 count) : m_data(begin), m_size(count) { }
 
-        constexpr span(Tp* begin, Tp* end) : data_(begin)
+        constexpr span(Tp* begin, Tp* end) : m_data(begin)
         {
             if (end < begin)
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
             if ((reinterpret_cast<u64>(end) - reinterpret_cast<u64>(begin)) % sizeof(Tp))
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
-            size_ = end - begin;
+            m_size = end - begin;
         }
 
         template<typename Container>
@@ -53,92 +53,92 @@ namespace uf
 
         constexpr void clear() noexcept
         {
-            data_ = nullptr;
-            size_ = 0;
+            m_data = nullptr;
+            m_size = 0;
         }
 
         constexpr u64 size() const noexcept
         {
-            return size_;
+            return m_size;
         }
 
         constexpr bool empty() const noexcept
         {
-            return !size_;
+            return !m_size;
         }
 
         constexpr span subspan(u64 begin, u64 count = std::numeric_limits<u64>::max()) const
         {
             if (count == std::numeric_limits<u64>::max())
-                return span(data_ + begin, data_ + size_);
-            return span(data_ + begin, data_ + begin + count);
+                return span(m_data + begin, m_data + m_size);
+            return span(m_data + begin, m_data + begin + count);
         }
 
         constexpr reference front() const
         {
-            return data_[0];
+            return m_data[0];
         }
 
         constexpr reference back() const
         {
-            return data_[size_ - 1];
+            return m_data[m_size - 1];
         }
 
         constexpr pointer data() const noexcept
         {
-            return data_;
+            return m_data;
         }
 
         constexpr reference operator[](u64 i) const
         {
-            return data_[i];
+            return m_data[i];
         }
 
         constexpr reference at(u64 i) const
         {
-            if (i >= size_)
+            if (i >= m_size)
                 throw std::out_of_range("span: Out of range");
             return operator[](i);
         }
 
         constexpr iterator begin() const noexcept
         {
-            return data_;
+            return m_data;
         }
 
         constexpr iterator end() const noexcept
         {
-            return data_ + size_;
+            return m_data + m_size;
         }
 
         constexpr const_iterator cbegin() const noexcept
         {
-            return data_;
+            return m_data;
         }
 
         constexpr const_iterator cend() const noexcept
         {
-            return data_ + size_;
+            return m_data + m_size;
         }
 
         constexpr reverse_iterator rbegin() const noexcept
         {
-            return reverse_iterator(data_ + size_);
+            return reverse_iterator(m_data + m_size);
         }
 
         constexpr reverse_iterator rend() const noexcept
         {
-            return reverse_iterator(data_);
+            return reverse_iterator(m_data);
         }
 
         constexpr const_reverse_iterator crbegin() const noexcept
         {
-            return reverse_iterator(data_ + size_);
+            return reverse_iterator(m_data + m_size);
         }
 
         constexpr const_reverse_iterator crend() const noexcept
         {
-            return reverse_iterator(data_);
+            return reverse_iterator(m_data);
         }
     };
 

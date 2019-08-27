@@ -139,7 +139,7 @@ namespace uf::mt
     DECLARE_N1S(is_tpack_different, typename...);
 
     inline namespace sequence_operations
-    {
+    {        
         template<typename S>
         struct seq_first : constant<S::template get<0>> { };
 
@@ -200,6 +200,14 @@ namespace uf::mt
         struct seq_push_front<sequence<SArgs...>, Ns...> : type_identity<sequence<Ns..., SArgs...>> { };
 
         DECLARE_T2S(seq_push_front, typename, auto...);
+
+        template<auto V, u64 N>
+        struct seq_one_value : type_identity<seq_concat_t<seq_push_back_t<sequence<>, V>, typename seq_one_value<V, N - 1>::type>> { };
+
+        template<auto V>
+        struct seq_one_value<V, 0> : type_identity<sequence<>> { };
+
+        DECLARE_T2(seq_one_value, auto, u64);
 
         template<typename S>
         struct seq_reverse;
@@ -338,6 +346,14 @@ namespace uf::mt
         };
 
         DECLARE_T2S(tuple_push_front, typename, typename...);
+
+        template<typename T, u64 N>
+        struct tuple_one_type : type_identity<tuple_concat_t<tuple_push_back_t<std::tuple<>, T>, typename tuple_one_type<T, N - 1>::type>> { };
+
+        template<typename T>
+        struct tuple_one_type<T, 0> : type_identity<std::tuple<>> { };
+
+        DECLARE_T2(tuple_one_type, typename, u64);
 
         template<typename T>
         struct tuple_reverse;
