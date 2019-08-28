@@ -27,26 +27,24 @@ namespace uf
     public:
         constexpr span() noexcept = default;
 
-        constexpr span(const span&) noexcept = default;
+        constexpr span(pointer begin, u64 count) : m_data(begin), m_size(count) { }
 
-        constexpr span& operator=(const span&) noexcept = default;
-
-        constexpr span(Tp* begin, u64 count) : m_data(begin), m_size(count) { }
-
-        constexpr span(Tp* begin, Tp* end) : m_data(begin)
+        constexpr span(pointer begin, pointer end) : span(begin, end - begin)
         {
             if (end < begin)
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
-            if ((reinterpret_cast<u64>(end) - reinterpret_cast<u64>(begin)) % sizeof(Tp))
+            if ((reinterpret_cast<u64>(end) - reinterpret_cast<u64>(begin)) % sizeof(value_type))
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
-            m_size = end - begin;
         }
 
-        template<typename Container>
-        constexpr span(Container& container) : span(container.data(), container.size()) { }
+        template<class C>
+        span(C&& c) : span(c.data(), c.size())
+        {
+            static_assert (std::is_lvalue_reference_v<C> || mt::is_instantiated_from_v<uf::span, std::decay_t<C>>, "Attempt to create span from rvalue");
+        }
 
         template<u64 N>
-        constexpr span(Tp(&arr)[N]) : span(arr, N) { }
+        constexpr span(value_type(&arr)[N]) : span(arr, N) { }
 
         constexpr void clear() noexcept
         {
@@ -139,7 +137,7 @@ namespace uf
         }
     };
 
-    template<typename Container>
-    span(Container& container) -> span<std::remove_pointer_t<decltype(container.data())>>;
+    template<typename C>
+    span(C&& c) -> span<std::remove_pointer_t<decltype(c.data())>>;
 }
 // namespace uf

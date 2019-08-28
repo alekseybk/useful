@@ -302,10 +302,16 @@ TEST(span)
     {
         const std::vector<int> v{2, 5};
         span s(v);
-        static_assert(std::is_same_v<decltype(s)::value_type, const int>);
+        static_assert (std::is_same_v<decltype(s)::value_type, const int>);
         assert_eq(s.size(), 2);
         assert_eq(s[0], 2);
         assert_eq(s[1], 5);
+    }
+
+    {
+        auto f = [](span<const std::string>){ };
+        span<std::string> s;
+        f(s);
     }
 }
 
