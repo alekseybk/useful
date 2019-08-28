@@ -283,16 +283,6 @@ TEST(span)
     }
 
     {
-        auto f = [](auto s)
-        {
-            static_assert(std::is_same_v<typename decltype(s)::value_type, const int>);
-            assert_eq(s[1], 6);
-            assert_eq(s.size(), 3);
-        };
-        f(span{2, 6, 1});
-    }
-
-    {
         std::vector<int> v{1, 2, 3};
         span s1(v);
         span<const int> s2(s1);

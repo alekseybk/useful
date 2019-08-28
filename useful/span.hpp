@@ -25,11 +25,11 @@ namespace uf
         u64 m_size = 0;
 
     public:
-        span() noexcept = default;
+        constexpr span() noexcept = default;
 
-        span(const span&) noexcept = default;
+        constexpr span(const span&) noexcept = default;
 
-        span& operator=(const span&) noexcept = default;
+        constexpr span& operator=(const span&) noexcept = default;
 
         constexpr span(Tp* begin, u64 count) : m_data(begin), m_size(count) { }
 
@@ -44,9 +44,6 @@ namespace uf
 
         template<typename Container>
         constexpr span(Container& container) : span(container.data(), container.size()) { }
-
-        template<typename T>
-        constexpr span(std::initializer_list<T> l) : span(l.begin(), l.end()) { }
 
         template<u64 N>
         constexpr span(Tp(&arr)[N]) : span(arr, N) { }
@@ -97,7 +94,7 @@ namespace uf
         constexpr reference at(u64 i) const
         {
             if (i >= m_size)
-                throw std::out_of_range("span: Out of range");
+                throw std::out_of_range("span: Out of range, index = " + std::to_string(i) + ", but size = " + std::to_string(size()));
             return operator[](i);
         }
 
@@ -144,8 +141,5 @@ namespace uf
 
     template<typename Container>
     span(Container& container) -> span<std::remove_pointer_t<decltype(container.data())>>;
-
-    template<typename T>
-    span(std::initializer_list<T>) -> span<const T>;
 }
 // namespace uf
