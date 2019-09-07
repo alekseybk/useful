@@ -85,7 +85,7 @@ namespace uf::mt
     DECLARE_N2S(npack_first, auto, auto...);
 
     template<typename... Ts>
-    struct tpack_last : type_identity<typename decltype((type_identity<Ts>{ }, ...))::type> { };
+    struct tpack_last : type_identity<std::tuple_element_t<sizeof...(Ts) - 1, std::tuple<Ts...>>> { };
 
     DECLARE_T1S(tpack_last, typename...);
 

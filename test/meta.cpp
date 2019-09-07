@@ -66,4 +66,14 @@ TEST(seq_select)
     static_assert (std::is_same_v<seq_select_t<sequence<1, 2, 3>>, sequence<>>);
 }
 
+TEST(tpack_last)
+{
+    static_assert (std::is_same_v<tpack_last_t<int, char>, char>);
+    static_assert (std::is_same_v<tpack_last_t<int, char&>, char&>);
+    static_assert (std::is_same_v<tpack_last_t<int, char&&>, char&&>);
+    static_assert (std::is_same_v<tpack_last_t<char>, char>);
+    static_assert (std::is_same_v<tpack_last_t<char&>, char&>);
+    static_assert (std::is_same_v<tpack_last_t<char&&>, char&&>);
+}
+
 

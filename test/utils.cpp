@@ -312,6 +312,8 @@ TEST(span)
         auto f = [](span<const std::string>){ };
         span<std::string> s;
         f(s);
+        span<const std::string> s2;
+        s2 = s;
     }
 }
 

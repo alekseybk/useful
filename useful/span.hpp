@@ -29,10 +29,8 @@ namespace uf
 
         constexpr span(pointer begin, u64 count) : m_data(begin), m_size(count) { }
 
-        constexpr span(pointer begin, pointer end) : span(begin, end - begin)
+        constexpr span(pointer begin, pointer end) : span(begin, end <= begin ? 0 : end - begin)
         {
-            if (end < begin)
-                throw std::out_of_range("span::span: Invalid [begin, end) range");
             if ((reinterpret_cast<u64>(end) - reinterpret_cast<u64>(begin)) % sizeof(value_type))
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
         }
