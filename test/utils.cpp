@@ -315,6 +315,15 @@ TEST(span)
         span<const std::string> s2;
         s2 = s;
     }
+
+    {
+        std::vector<int> v{1};
+        span s(v);
+        for (int i = 0; i < 10; ++i)
+            s = s.subspan(1);
+        assert_eq(s.data(), v.data() + 1);
+        assert_eq(s.size(), 0);
+    }
 }
 
 TEST(subtuple)

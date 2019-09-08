@@ -27,11 +27,11 @@ namespace uf
     public:
         constexpr span() noexcept = default;
 
-        constexpr span(pointer begin, u64 count) : m_data(count ? begin : nullptr), m_size(count) { }
+        constexpr span(pointer begin, u64 count) : m_data(begin), m_size(count) { }
 
-        constexpr span(pointer begin, pointer end) : span(begin, end <= begin ? 0 : end - begin)
+        constexpr span(pointer begin, pointer end) : span(begin, end - begin)
         {
-            if (m_data && (reinterpret_cast<u64>(end) - reinterpret_cast<u64>(begin)) % sizeof(value_type))
+            if (end < begin || (reinterpret_cast<u64>(end) - reinterpret_cast<u64>(begin)) % sizeof(value_type))
                 throw std::out_of_range("span::span: Invalid [begin, end) range");
         }
 
@@ -62,9 +62,10 @@ namespace uf
 
         constexpr span subspan(u64 begin, u64 count = std::numeric_limits<u64>::max()) const
         {
-            if (count == std::numeric_limits<u64>::max())
-                return span(m_data + begin, m_data + m_size);
-            return span(m_data + begin, m_data + begin + count);
+            const u64 bpos = std::min(begin, m_size);
+            if (count > m_size - bpos)
+                return span(m_data + bpos, m_size - bpos);
+            return span(m_data + bpos, count);
         }
 
         constexpr reference front() const
