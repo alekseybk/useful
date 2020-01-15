@@ -2,7 +2,8 @@
 #include <map>
 #include <functional>
 
-std::multimap<std::string, std::function<void()>>& get_test_map()
+
+std::multimap<std::string, std::function<void()>>& get_test_map() noexcept
 {
     static std::multimap<std::string, std::function<void()>> result;
     return result;

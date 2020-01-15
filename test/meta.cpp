@@ -9,11 +9,14 @@ using namespace uf::base;
 
 TEST(function_info)
 {
-    struct X { int f(double, char); };
-    static_assert (function_info<decltype(&X::f)>::arity == 2);
-    static_assert (std::is_same_v<function_info<decltype(&X::f)>::result, int>);
-    static_assert (std::is_same_v<function_info<decltype(&X::f)>::nth<0>, double>);
-    static_assert (std::is_same_v<function_info<decltype(&X::f)>::nth<1>, char>);
+    struct X
+    {
+        int f(double, char);
+    };
+    static_assert(function_info<decltype(&X::f)>::arity == 2);
+    static_assert(std::is_same_v<function_info<decltype(&X::f)>::result, int>);
+    static_assert(std::is_same_v<function_info<decltype(&X::f)>::nth<0>, double>);
+    static_assert(std::is_same_v<function_info<decltype(&X::f)>::nth<1>, char>);
 }
 
 TEST(is_iterator)

@@ -447,7 +447,7 @@ namespace uf::mt
 
     DECLARE_T2(instance_from_tuple, template<typename...> typename, typename);
 
-    template<class F>
+    template<typename F>
     struct function_info;
 
     template<typename R, typename... Args>
@@ -467,7 +467,7 @@ namespace uf::mt
     template<typename R, typename... Args>
     struct function_info<R(*)(Args...)> : function_info<R(Args...)> { };
 
-    template<class C, typename R, typename... Args>
+    template<typename C, typename R, typename... Args>
     struct function_info<R(C::*)(Args...)> : function_info<R(Args...)> { };
 
     // **********************************
@@ -523,9 +523,9 @@ namespace uf::mt
     DECLARE_N1(is_reverse_iterator, typename);
 
     template<typename Tp>
-    struct is_usual_iterator : std::bool_constant<is_iterator_v<Tp> && !is_reverse_iterator_v<Tp>> { };
+    struct is_not_reverse_iterator : std::bool_constant<is_iterator_v<Tp> && !is_reverse_iterator_v<Tp>> { };
 
-    DECLARE_N1(is_usual_iterator, typename);
+    DECLARE_N1(is_not_reverse_iterator, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_random_access_iterator : std::false_type { };
@@ -539,7 +539,7 @@ namespace uf::mt
     struct is_random_access_container : std::false_type { };
 
     template<typename Tp>
-    struct is_random_access_container<Tp, enif<is_iterable_v<Tp>>> : is_random_access_iterator<typename std::remove_reference_t<Tp>::iterator> { };
+    struct is_random_access_container<Tp, enif<is_iterable_v<Tp> && is_random_access_iterator_v<typename std::remove_reference_t<Tp>::iterator>>> : std::true_type { };
 
     DECLARE_N1(is_random_access_container, typename);
 }

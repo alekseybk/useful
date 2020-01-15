@@ -135,7 +135,7 @@ namespace uf
         }
 
         template<typename RandomAccessIterator, typename Compare>
-        std::vector<u64> sort_with_pos(RandomAccessIterator begin, RandomAccessIterator end, Compare&& cmp)
+        std::vector<u64> sort_indexes(RandomAccessIterator begin, RandomAccessIterator end, Compare&& cmp)
         {
             std::vector<u64> pos(std::distance(begin, end));
             std::iota(pos.begin(), pos.end(), 0);
@@ -143,21 +143,6 @@ namespace uf
             {
                 return cmp(*( begin + e1), *(begin + e2));
             });
-            std::vector<u8> used(pos.size(), 0);
-            std::unordered_map<u64, typename RandomAccessIterator::value_type> m;
-            for (u64 i = 0; i < pos.size(); ++i)
-            {
-                if (i == pos[i])
-                    continue;
-                used[pos[i]] = 1;
-                if (!used[i])
-                    m.insert({i, std::move(*(begin + i))});
-                const auto j = m.find(pos[i]);
-                if (j != m.end())
-                    *(begin + i) = std::move(j->second);
-                else
-                    *(begin + i) = std::move(*(begin + pos[i]));
-            }
             return pos;
         }
 

@@ -27,8 +27,17 @@ namespace uf
         enum class sfinae;
         inline constexpr sfinae SF{0};
 
+        namespace detail
+        {
+            template<typename Any, typename...>
+            struct sfinae_t_impl
+            {
+                using type = std::conditional_t<std::is_same_v<Any, void>, sfinae, sfinae>;
+            };
+        }
+
         template<typename... Ts>
-        using sfinae_t = sfinae;
+        using sfinae_t = typename detail::sfinae_t_impl<void, Ts...>::type;
 
         template<bool X>
         using enif = std::enable_if_t<X, sfinae>;
