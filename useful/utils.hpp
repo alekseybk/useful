@@ -8,7 +8,7 @@ namespace uf
         template<typename Tp, u64... Ns>
         constexpr auto tuple_clone_value_helper(Tp&& value, sequence<Ns...>)
         {
-            return std::make_tuple(mt::clone_something<Ns>(value)...);
+            return std::make_tuple(mt::clone_ref_with_auto<Ns>(value)...);
         }
 
         template<u64 N, typename F, typename... Ts>
@@ -216,7 +216,7 @@ namespace uf
             return object;
         }
 
-        template<typename T, enif<mt::is_usual_iterator_v<std::decay_t<T>> && !std::is_pointer_v<std::decay_t<T>>> = SF>
+        template<typename T, enif<mt::is_legacy_iterator_v<std::decay_t<T>> && !std::is_pointer_v<std::decay_t<T>>> = SF>
         constexpr auto* get_base_ptr(T&& object)
         {
             return object.base();

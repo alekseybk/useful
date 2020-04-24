@@ -1,19 +1,11 @@
 #pragma once
+#include <ctime>
+
 #include <chrono>
 #include <functional>
 
 #include "base.hpp"
 
-#ifdef __linux
-
-#include <unistd.h>
-#include <sys/times.h>
-
-#elif _WIN32
-
-#include <windows.h>
-
-#endif
 
 namespace uf
 {
@@ -79,33 +71,22 @@ namespace uf
             return tm_type(std::chrono::high_resolution_clock::now, get_sec);
         }
 
-#ifdef __linux__
-
         auto create_proc_tm()
         {
-            using tm_type = time_meter<i64>;
+            using tm_type = time_meter<clock_t>;
 
             static const auto get_now = []()
             {
-                tms result;
-                times(&result);
-                return result.tms_stime + result.tms_utime;
+                return clock();
             };
 
             static const auto get_sec = [](tm_type::time_point p1, tm_type::time_point p2)
             {
-                static const auto per_second = sysconf(_SC_CLK_TCK);
-                return static_cast<double>(p2 - p1) / per_second;
+                return static_cast<double>(p2 - p1) / CLOCKS_PER_SEC;
             };
 
             return tm_type(get_now, get_sec);
         }
-
-#elif _WIN32
-
-        // TODO
-
-#endif
 
         template<typename F, typename... Args>
         double benchmark(F&& f, Args&&... args)

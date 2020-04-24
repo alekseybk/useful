@@ -79,4 +79,25 @@ TEST(tpack_last)
     static_assert (std::is_same_v<tpack_last_t<char&&>, char&&>);
 }
 
+TEST(type_to_id)
+{
+    static_assert (type_to_id<int> == 1);
+    static_assert (type_to_id<double> == 2);
+}
+
+TEST(id_to_type)
+{
+    static_assert (std::is_same_v<id_to_type<1>, int>);
+    static_assert (std::is_same_v<id_to_type<2>, double>);
+}
+
+TEST(struct_info)
+{
+    struct s { int x; double y; int z; };
+    static_assert (struct_info<s>::n == 3);
+    static_assert (std::is_same_v<struct_info<s>::mtype<0>, int>);
+    static_assert (std::is_same_v<struct_info<s>::mtype<1>, double>);
+    static_assert (std::is_same_v<struct_info<s>::mtype<2>, int>);
+}
+
 

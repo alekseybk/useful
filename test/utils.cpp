@@ -2,6 +2,7 @@
 
 #include "../useful/utils.hpp"
 #include "../useful/span.hpp"
+#include "../useful/benchmark.hpp"
 
 using namespace uf;
 
@@ -454,10 +455,7 @@ TEST(sort_pos)
 {
     {
         std::vector v{3, 2, 1};
-        auto pos = sort_with_pos(v.begin(), v.end(), std::less<int>());
-        assert_eq(v[0], 1);
-        assert_eq(v[1], 2);
-        assert_eq(v[2], 3);
+        auto pos = sort_indexes(v.begin(), v.end(), std::less<int>());
         assert_eq(pos[0], 2);
         assert_eq(pos[1], 1);
         assert_eq(pos[2], 0);
@@ -468,12 +466,10 @@ TEST(sort_pos)
         iota(v1.begin(), v1.end(), 0);
         std::random_shuffle(v1.begin(), v1.end());
         auto v2 = v1;
-        auto v3 = v1;
-        auto result = sort_with_pos(v1.begin(), v1.end(), std::less<int>());
+        auto pos = sort_indexes(v1.begin(), v1.end(), std::less<int>());
         std::stable_sort(v2.begin(), v2.end(), std::less<int>());
-        assert_eq(v1, v2);
         for (u64 i = 0; i < v1.size(); ++i)
-            assert_eq(v3[result[i]], v1[i]);
+            assert_eq(v1[pos[i]], v2[i]);
     }
 }
 

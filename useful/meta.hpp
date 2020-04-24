@@ -1,5 +1,6 @@
 #pragma once
 #include "import.hpp"
+#include "typeid.hpp"
 
 #define DECLARE_N1(name, a1) \
     template<a1 A1> \
@@ -52,22 +53,22 @@
 namespace uf::mt
 {
     template<typename, typename Tp>
-    constexpr auto&& clone_something(Tp&& x)
-    {
-        return std::forward<Tp>(x);
-    }
+    constexpr auto&& clone_ref_with_type(Tp&& x) { return std::forward<Tp>(x); }
 
     template<auto, typename Tp>
-    constexpr auto&& clone_something(Tp&& x)
-    {
-        return std::forward<Tp>(x);
-    }
+    constexpr auto&& clone_ref_with_auto(Tp&& x) { return std::forward<Tp>(x); }
+
+    template<typename, auto N>
+    constexpr auto clone_auto_with_type() { return N; }
+
+    template<auto, auto N>
+    constexpr auto clone_auto_with_auto() { return N; };
 
     template<typename, typename Tp>
-    constexpr Tp clone_something();
+    constexpr Tp clone_type_with_type();
 
     template<auto, typename Tp>
-    constexpr Tp clone_something();
+    constexpr Tp clone_type_with_auto();
 
     template<typename Tp>
     struct is_decayed : std::bool_constant<!std::is_const_v<Tp> && !std::is_volatile_v<Tp> && !std::is_reference_v<Tp>> { };
@@ -523,9 +524,9 @@ namespace uf::mt
     DECLARE_N1(is_reverse_iterator, typename);
 
     template<typename Tp>
-    struct is_not_reverse_iterator : std::bool_constant<is_iterator_v<Tp> && !is_reverse_iterator_v<Tp>> { };
+    struct is_legacy_iterator : std::bool_constant<is_iterator_v<Tp> && !is_reverse_iterator_v<Tp>> { };
 
-    DECLARE_N1(is_not_reverse_iterator, typename);
+    DECLARE_N1(is_legacy_iterator, typename);
 
     template<typename Tp, typename = sfinae>
     struct is_random_access_iterator : std::false_type { };
@@ -542,6 +543,75 @@ namespace uf::mt
     struct is_random_access_container<Tp, enif<is_iterable_v<Tp> && is_random_access_iterator_v<typename std::remove_reference_t<Tp>::iterator>>> : std::true_type { };
 
     DECLARE_N1(is_random_access_container, typename);
+
+    namespace detail
+    {
+        struct convertible_to_any
+        {
+        public:
+            template<typename Tp>
+            constexpr operator Tp() const noexcept;
+        };
+
+        struct convertible_to_any_id_saver
+        {
+            u64& out_id;
+
+            constexpr convertible_to_any_id_saver(u64& out_id) : out_id(out_id) { }
+
+            template<typename Tp>
+            constexpr operator Tp() noexcept { out_id = type_to_id<Tp>; return Tp{}; }
+        };
+
+        template<typename Tp, typename Seq, typename Sfinae = sfinae>
+        struct is_constructible_from_n_helper : constant<false> { };
+
+        template<typename Tp, auto... Ns>
+        struct is_constructible_from_n_helper<Tp, sequence<Ns...>, sfinae_t<decltype(Tp{decltype(clone_type_with_auto<Ns, convertible_to_any>()){}...})>> : constant<true> { };
+
+        template<typename Tp, u64 N>
+        struct is_constructible_from_n : constant<is_constructible_from_n_helper<Tp, decltype(make_sequence<N>())>::value> { };
+
+        template<typename Tp, u64 N, bool Stop>
+        struct struct_members_number_helper : constant<N> { };
+
+        template<typename Tp, u64 N>
+        struct struct_members_number_helper<Tp, N, false> : constant<struct_members_number_helper<Tp, N - 1, is_constructible_from_n<Tp, N - 1>::value>::value> { };
+
+        template<typename Tp, u64 Max = sizeof(Tp)>
+        struct struct_members_number : constant<struct_members_number_helper<Tp, Max, is_constructible_from_n<Tp, Max>::value>::value> { };
+
+        template<typename Tp, u64... Ns>
+        constexpr auto type_ids(sequence<Ns...>)
+        {
+            u64 result[sizeof...(Ns)]{};
+            Tp dummy{convertible_to_any_id_saver(result[Ns])...};
+            return std::array<u64, sizeof...(Ns)>{{result[Ns]...}};
+        }
+
+        template<typename Tp, u64 N, u64... Ns>
+        constexpr auto types_from_ids(sequence<Ns...>)
+        {
+            constexpr auto ids = type_ids<Tp>(make_sequence<N>());
+            return std::tuple(id_to_type<ids[Ns]>{}...);
+        }
+
+        template<typename Tp>
+        constexpr auto struct_members_info()
+        {
+            constexpr auto members_number = struct_members_number<Tp>::value;
+            return types_from_ids<Tp, members_number>(make_sequence<members_number>());
+        }
+    }
+
+    template<typename Tp>
+    struct struct_info
+    {
+        static constexpr u64 n = detail::struct_members_number<Tp>::value;
+
+        template<u64 N>
+        using mtype = std::tuple_element_t<N, decltype(detail::struct_members_info<Tp>())>;
+    };
 }
 // namespace uf::mt
 
