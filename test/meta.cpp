@@ -1,11 +1,11 @@
 #include "testing.hpp"
 
-#include "../useful/meta.hpp"
+#include "../wh/meta.hpp"
 
 #include <memory>
 
-using namespace uf::mt;
-using namespace uf::base;
+using namespace wh::mt;
+using namespace wh::base;
 
 TEST(function_info)
 {

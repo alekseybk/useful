@@ -14,7 +14,7 @@ using std::endl;
 std::multimap<std::string, std::function<void()>>& get_test_map() noexcept;
 
 #define TEST(name) \
-    static void uf_test_##name(); \
-    static int DUMMY_##name = []() noexcept { get_test_map().insert({#name, &uf_test_##name}); return 0; }(); \
-    static void uf_test_##name()
+    static void wh_test_##name(); \
+    static int DUMMY_##name = []() noexcept { get_test_map().insert({#name, &wh_test_##name}); return 0; }(); \
+    static void wh_test_##name()
 

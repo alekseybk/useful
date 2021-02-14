@@ -1,236 +1,39 @@
 #include "testing.hpp"
 
-#include "../useful/utils.hpp"
-#include "../useful/span.hpp"
-#include "../useful/benchmark.hpp"
+#include "../wh/utils.hpp"
+#include "../wh/span.hpp"
+#include "../wh/benchmark.hpp"
 
-using namespace uf;
+using namespace wh;
 
-TEST(stf_any)
+TEST(stf_or)
 {
     {
         char c = 'a';
-        assert_true(stf_any(c, 'a'));
-        assert_true(stf_any(c, [](char c){ return c == 'a'; }));
-        assert_true(stf_any(c, [](char){ return false; }, 'a'));
-        assert_false(stf_any(c, [](char){ return false; }));
+        assert_true(stf_or(c, 'a'));
+        assert_true(stf_or(c, [](char c){ return c == 'a'; }));
+        assert_true(stf_or(c, [](char){ return false; }, 'a'));
+        assert_false(stf_or(c, [](char){ return false; }));
     }
 
     {
         int i = 5;
-        assert_true(stf_any(i, 5));
-        assert_true(stf_any(i, [](int i){ return i == 5; }));
-        assert_true(stf_any(i, [](int){ return false; }, 5));
-        assert_false(stf_any(i, [](int){ return false; }));
+        assert_true(stf_or(i, 5));
+        assert_true(stf_or(i, [](int i){ return i == 5; }));
+        assert_true(stf_or(i, [](int){ return false; }, 5));
+        assert_false(stf_or(i, [](int){ return false; }));
     }
 
     {
         std::string s = "12345";
-        assert_true(stf_any(s, "12345"));
-        assert_true(stf_any(s, [](const std::string& s){ return s == "12345"; }));
-        assert_true(stf_any(s, [](const std::string&){ return false; }, [](const std::string& s){ return s == "12345"; }));
-        assert_false(stf_any(s, [](const std::string&){ return false; }));
+        assert_true(stf_or(s, "12345"));
+        assert_true(stf_or(s, [](const std::string& s){ return s == "12345"; }));
+        assert_true(stf_or(s, [](const std::string&){ return false; }, [](const std::string& s){ return s == "12345"; }));
+        assert_false(stf_or(s, [](const std::string&){ return false; }));
     }
 }
 
-TEST(stf_first_obj)
-{
-    {
-        std::pair<int, double> x(1, 2.0);
-        assert_true(stf_first_obj(1)(x));
-        assert_false(stf_first_obj([](int x){ return x != 1; })(x));
-    }
-}
-
-TEST(remove_associative)
-{
-    {
-        std::map<std::string, int> m{{"123", 123}, {"111", 111}};
-        remove_associative(m, stf_first_obj("123"));
-        assert_false(m.count("123"));
-        assert_true(m.size() == 1);
-        assert_true(m["111"] == 111);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"111", 111}, {"222", 222}};
-        remove_associative(m, stf_first_obj("123"));
-        assert_false(m.count("123"));
-        assert_true(m.size() == 2);
-        assert_true(m["111"] == 111);
-        assert_true(m["222"] == 222);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"124", 124}, {"111", 111}, {"222", 222}};
-        remove_associative(m, stf_first_obj("123"), stf_first_obj([](const auto& key){ return key == "124"; }));
-        assert_false(m.count("123"));
-        assert_false(m.count("124"));
-        assert_true(m.size() == 2);
-        assert_true(m["111"] == 111);
-        assert_true(m["222"] == 222);
-    }
-
-    {
-        std::unordered_multimap<std::string, int> m{{"123", 123}, {"123", 123}, {"124", 124}, {"124", 124}, {"111", 111}, {"222", 222}};
-        remove_associative(m, stf_first_obj("123"), stf_first_obj([](const auto& key){ return key == "124"; }));
-        assert_false(m.count("123"));
-        assert_false(m.count("124"));
-        assert_true(m.size() == 2);
-        assert_true(m.find("111")->second == 111);
-        assert_true(m.find("222")->second == 222);
-    }
-
-
-    {
-        std::unordered_multiset<int> s{1, 2, 3, 4, 4, 4, 4, 5, 5, 5};
-        remove_associative(s, 4, [](const auto& key){ return key == 5; });
-        assert_false(s.count(4));
-        assert_false(s.count(5));
-        assert_true(s.size() == 3);
-        assert_true(s.count(1));
-        assert_true(s.count(2));
-        assert_true(s.count(3));
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"111", 111}};
-        remove_associative(m, stf_second_obj(123));
-        assert_false(m.count("123"));
-        assert_true(m.size() == 1);
-        assert_true(m["111"] == 111);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"111", 111}, {"222", 222}};
-        remove_associative(m, stf_second_obj(123));
-        assert_false(m.count("123"));
-        assert_true(m.size() == 2);
-        assert_true(m["111"] == 111);
-        assert_true(m["222"] == 222);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"124", 124}, {"111", 111}, {"222", 222}};
-        remove_associative(m, stf_second_obj(123), stf_second_obj([](const auto& value){ return value == 124; }));
-        assert_false(m.count("123"));
-        assert_false(m.count("124"));
-        assert_true(m.size() == 2);
-        assert_true(m["111"] == 111);
-        assert_true(m["222"] == 222);
-    }
-
-    {
-        std::unordered_multimap<std::string, int> m{{"123", 123}, {"123", 123}, {"124", 124}, {"124", 124}, {"111", 111}, {"222", 222}};
-        remove_associative(m, stf_second_obj(123), stf_second_obj([](const auto& value){ return value == 124; }));
-        assert_false(m.count("123"));
-        assert_false(m.count("124"));
-        assert_true(m.size() == 2);
-        assert_true(m.find("111")->second == 111);
-        assert_true(m.find("222")->second == 222);
-    }
-
-    {
-        std::unordered_multiset<int> s{1, 2, 3, 4, 4, 4, 4, 5, 5, 5};
-        remove_associative(s, 4, [](const auto& value){ return value == 5; });
-        assert_false(s.count(4));
-        assert_false(s.count(5));
-        assert_true(s.size() == 3);
-        assert_true(s.count(1));
-        assert_true(s.count(2));
-        assert_true(s.count(3));
-    }
-}
-
-TEST(remove_associative_copy)
-{
-    {
-        std::map<std::string, int> m{{"123", 123}, {"111", 111}};
-        auto result = remove_associative_copy(m, stf_first_obj("123"));
-        assert_false(result.count("123"));
-        assert_true(result.size() == 1);
-        assert_true(result["111"] == 111);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"111", 111}, {"222", 222}};
-        auto result = remove_associative_copy(m, stf_first_obj("123"));
-        assert_false(result.count("123"));
-        assert_true(result.size() == 2);
-        assert_true(result["111"] == 111);
-        assert_true(result["222"] == 222);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"124", 124}, {"111", 111}, {"222", 222}};
-        auto result = remove_associative_copy(m, stf_first_obj("123"), stf_first_obj([](const auto& key){ return key == "124"; }));
-        assert_false(result.count("123"));
-        assert_false(result.count("124"));
-        assert_true(result.size() == 2);
-        assert_true(result["111"] == 111);
-        assert_true(result["222"] == 222);
-    }
-
-    {
-        std::unordered_multimap<std::string, int> m{{"123", 123}, {"123", 123}, {"124", 124}, {"124", 124}, {"111", 111}, {"222", 222}};
-        auto result = remove_associative_copy(m, stf_first_obj("123"), stf_first_obj([](const auto& key){ return key == "124"; }));
-        assert_false(result.count("123"));
-        assert_false(result.count("124"));
-        assert_true(result.size() == 2);
-        assert_true(result.find("111")->second == 111);
-        assert_true(result.find("222")->second == 222);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"111", 111}};
-        auto result = remove_associative_copy(m, stf_second_obj(123));
-        assert_false(result.count("123"));
-        assert_true(result.size() == 1);
-        assert_true(result["111"] == 111);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"111", 111}, {"222", 222}};
-        auto result = remove_associative_copy(m, stf_second_obj(123));
-        assert_false(result.count("123"));
-        assert_true(result.size() == 2);
-        assert_true(result["111"] == 111);
-        assert_true(result["222"] == 222);
-    }
-
-    {
-        std::map<std::string, int> m{{"123", 123}, {"124", 124}, {"111", 111}, {"222", 222}};
-        auto result = remove_associative_copy(m, stf_second_obj(123), stf_second_obj([](const auto& value){ return value == 124; }));
-        assert_false(result.count("123"));
-        assert_false(result.count("124"));
-        assert_true(result.size() == 2);
-        assert_true(result["111"] == 111);
-        assert_true(result["222"] == 222);
-    }
-
-    {
-        std::unordered_multimap<std::string, int> m{{"123", 123}, {"123", 123}, {"124", 124}, {"124", 124}, {"111", 111}, {"222", 222}};
-        auto result = remove_associative_copy(m, stf_second_obj(123), stf_second_obj([](const auto& value){ return value == 124; }));
-        assert_false(result.count("123"));
-        assert_false(result.count("124"));
-        assert_true(result.size() == 2);
-        assert_true(result.find("111")->second == 111);
-        assert_true(result.find("222")->second == 222);
-    }
-
-    {
-        std::unordered_multiset<int> s{1, 2, 3, 4, 4, 4, 4, 5, 5, 5};
-        auto result = remove_associative_copy(s, 4, [](const auto& key){ return key == 5; });
-        assert_false(result.count(4));
-        assert_false(result.count(5));
-        assert_true(result.size() == 3);
-        assert_true(result.count(1));
-        assert_true(result.count(2));
-        assert_true(result.count(3));
-    }
-}
-
-TEST(get_underlying_ptr)
+TEST(get_base_ptr)
 {
     {
         std::vector<int> v{1, 2, 3};
@@ -337,7 +140,6 @@ TEST(subtuple)
         X(const X&){ assert(false); }
     };
 
-
     std::tuple<X, X, X> t(1, 2, 3);
     std::tuple<X, X> st = subtuple<1>(std::move(t));
     std::tuple<X> sst = subtuple<1>(std::move(st));
@@ -423,12 +225,12 @@ TEST(tuple_transform)
     }
 }
 
-TEST(reverse_wrapper)
+TEST(reversed)
 {
     {
         std::vector v{1, 2, 3};
         std::vector<int> a;
-        for (const auto& e : reverse_wrapper(v))
+        for (const auto& e : reversed(v))
             a.push_back(e);
         assert_eq(a[0], 3);
         assert_eq(a[1], 2);
@@ -437,7 +239,7 @@ TEST(reverse_wrapper)
 
     {
         std::vector<int> a;
-        for (const auto& e : reverse_wrapper(std::vector{1, 2, 3}))
+        for (const auto& e : reversed(std::vector{1, 2, 3}))
             a.push_back(e);
         assert_eq(a[0], 3);
         assert_eq(a[1], 2);
@@ -446,12 +248,15 @@ TEST(reverse_wrapper)
 
     {
         const std::list<int> l{1, 2, 3};
-        auto w = reverse_wrapper(l);
+        auto w = reversed(l);
         static_assert (std::is_same_v<decltype(*w.begin()), const int&>);
+        int i = 3;
+        for (auto e : w)
+            assert_eq(i--, e);
     }
 }
 
-TEST(sort_pos)
+TEST(sort_indexes)
 {
     {
         std::vector v{3, 2, 1};

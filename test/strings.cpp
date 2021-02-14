@@ -1,8 +1,8 @@
 #include "testing.hpp"
 
-#include "../useful/strings.hpp"
+#include "../wh/strings.hpp"
 
-using namespace uf;
+using namespace wh;
 
 TEST(split)
 {
